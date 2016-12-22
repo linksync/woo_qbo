@@ -1,0 +1,85 @@
+#ls-wrapper > div > form > fieldset > p > a,
+#qbo-order-configuration > p > a{
+    text-decoration: none;
+}
+
+#ls-wrapper > div > fieldset > p > a > img,
+#ls-wrapper > div > form > fieldset > p > a > img{
+    margin-bottom:-4px;
+}
+
+#ls-wrapper > div > form > fieldset > p > input[type="radio"],
+#qbo-order-configuration > p > input{
+    margin-left: 15px;
+}
+
+
+#ls-wrapper > div > form > fieldset > p > label:nth-child(5){
+    width: 142px;
+}
+#ls-wrapper > div > form > fieldset > p > label:nth-child(2),
+#ls-wrapper > div > form > fieldset > p > label:nth-child(8),
+#ls-wrapper > div > form > fieldset > p > label:nth-child(2){
+    width: 54px;
+}
+#qbo-order-configuration > p > label:nth-child(2){
+    width: 142px !important
+}
+#qbo-order-configuration > p > label:nth-child(5){
+ width: 54px !important;
+}
+
+#ls-qbo-product-syncing-settings > table > tbody > tr > td > label,
+#unpublish_stock_id > label,
+#ps_cat_id_p > td > div > label:nth-child(1),
+#ps_cat_id_p > td > div > label.sub-option,
+#ls-qbo-order-syncing-settings > table > tbody > tr> td > label,
+#ls-qbo-order-syncing-settings > table > tbody > tr > td > div > div > div > label,
+#ls-qbo-order-syncing-settings > table > tbody > tr > td > div > label,
+#ls-qbo-product-syncing-settings > table > tbody > tr > td > div > span > label,
+#ls-qbo-product-syncing-settings > table > tbody > tr > td > div > label,
+#change_product_status > label,
+#ls-qbo-tax-options > label,
+#use_woo_tax_container > ul > li > label,
+#ls-qbo-order-syncing-settings > table > tbody > tr > td > div > div > div > div > label{
+    width: 100%;
+}
+
+.help-link{
+    background-image: url("../images/linksync/help.png");
+    background-repeat: no-repeat;
+    background-size: 100%;
+    width: 16px;
+    height: 16px;
+    display: inline-block;
+}
+
+#ls-qbo-tax-options > ul > li > label{
+    width: 130px !important;
+}
+
+.sub-option{
+    margin-left: 45px;
+    margin-top: 15px !important;
+}
+.hide, .sync_all_products_from_qbo, .sync_all_products_to_qbo{
+    display: none;
+}
+#sync_message{
+    margin-bottom: 0px;
+    margin-top: 0px;
+}
+
+.bg-grayed{
+    background-color: #E2E2E2;
+}
+
+.color-gray{
+    color:gray;
+}
+.color-red{
+    color: #7f0a0c;;
+}
+#sync_progress_container{
+    height: auto !important;
+}
