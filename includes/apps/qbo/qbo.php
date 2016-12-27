@@ -337,6 +337,8 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 		 */
 		public function includes(){
 
+			include_once LS_INC_DIR. 'apps/qbo/constants/class-ls-qbo-item-type.php';
+			include_once LS_INC_DIR. 'apps/qbo/constants/class-ls-qbo-receipt-type.php';
 			include_once LS_INC_DIR. 'apps/ls-core-functions.php';
 			include_once LS_INC_DIR. 'apps/class-ls-woo-tax.php';
 			include_once LS_INC_DIR. 'apps/class-ls-woo-product.php';
@@ -364,8 +366,11 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 			include_once LS_INC_DIR. 'apps/class-ls-json-product-factory.php';
 			include_once LS_INC_DIR. 'apps/class-ls-json-order-factory.php';
 
-			include_once LS_INC_DIR. 'apps/qbo/class-ls-qbo-sync.php';
-			include_once LS_INC_DIR. 'apps/class-ls-notice.php';
+			if(is_qbo()){
+				include_once LS_INC_DIR. 'apps/qbo/class-ls-qbo-sync.php';
+				include_once LS_INC_DIR. 'apps/class-ls-notice.php';
+			}
+
 
 		}
 

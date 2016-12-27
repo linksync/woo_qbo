@@ -7,10 +7,11 @@ class LS_Woo_Product{
 		LS_Simple_Product $product,
 		LS_Product_Meta $product_meta,
 		$is_new = false
-	){
+	)
+	{
 
 		//$product_id will not be empty if the product exists
-		if(!empty($product_meta->product_id)){
+		if (!empty($product_meta->product_id)) {
 			$match_with = $current_sync_option['match_product_with'];
 
 			//Update product details since product was found
@@ -19,99 +20,102 @@ class LS_Woo_Product{
 			//get QuickBooks product id
 			$qbo_product_id = get_qbo_id($product->get_id());
 
-			if(true == $is_new){
+			if (true == $is_new) {
 				// Add any default post meta
 				$product_meta->setup_defaults();
-				$product_meta->set_sku( $product->get_sku() );
+				$product_meta->set_sku($product->get_sku());
 			}
-			$product_meta->set_product_id( $qbo_product_id );
-			$product_meta->set_product_type( $product->get_product_type() );
-			$product_meta->set_income_account_id( $product->get_income_account_id() );
-			$product_meta->set_expense_account_id( $product->get_expense_account_id() );
-			$product_meta->set_asset_account_id( $product->get_asset_account_id() );
-			$product_meta->update_tax_value( $product->get_tax_value() );
-			$product_meta->update_tax_name( $product->get_tax_name() );
-			$product_meta->update_tax_rate( $product->get_tax_rate() );
-			$product_meta->update_tax_id( $product->get_tax_id() );
-			$qbo_includes_tax = ('false' === $product->does_includes_tax() || false === $product->does_includes_tax() ) ? 'false' : 'true';
-			$product_meta->update_qbo_includes_tax( $qbo_includes_tax );
+			$product_meta->set_product_id($qbo_product_id);
+			$product_meta->set_product_type($product->get_product_type());
+			$product_meta->set_income_account_id($product->get_income_account_id());
+			$product_meta->set_expense_account_id($product->get_expense_account_id());
+			$product_meta->set_asset_account_id($product->get_asset_account_id());
+			$product_meta->update_tax_value($product->get_tax_value());
+			$product_meta->update_tax_name($product->get_tax_name());
+			$product_meta->update_tax_rate($product->get_tax_rate());
+			$product_meta->update_tax_id($product->get_tax_id());
+			$product_meta->update_product_type($product->get_product_type());
+			$qbo_includes_tax = ('false' === $product->does_includes_tax() || false === $product->does_includes_tax()) ? 'false' : 'true';
+			$product_meta->update_qbo_includes_tax($qbo_includes_tax);
 
-			if( 'name' == $match_with ){
-				$product_meta->set_sku( $product->get_sku() );
+			if ('name' == $match_with) {
+				$product_meta->set_sku($product->get_sku());
 			}
 
-			if('on' == $current_sync_option['title_or_name'] || 'sku' == $match_with ){
+			if ('on' == $current_sync_option['title_or_name']) {
 				$product_args['post_title'] = $product->get_name();
 			}
 
-			if( 'on' == $current_sync_option['description'] ){
+			if ('on' == $current_sync_option['description']) {
 				$product_args['post_content'] = esc_html($product->get_description());
 			}
 
-			if( 'on' == $current_sync_option['price']['price']){
+			if ('on' == $current_sync_option['price']['price']) {
 				//Sync price between apps is on
 				$sell_price = $product->get_sell_price();
-				$product_meta->set_price( $sell_price );
-				$product_meta->set_regular_price( $sell_price );
+				$product_meta->set_price($sell_price);
+				$product_meta->set_regular_price($sell_price);
 
 				//Tax mapping
-				$tax_mapped = $current_sync_option[ 'price' ][ 'tax_classes' ];
+				$tax_mapped = $current_sync_option['price']['tax_classes'];
 				$qbo_tax_id = $product->get_tax_id();
-				$qbo_tax_id = !empty( $qbo_tax_id ) ? $qbo_tax_id : 'no_tax';
-				if (isset( $tax_mapped[ $qbo_tax_id ] )) {
-					$woo_tax_mapped = ('standard' == $tax_mapped[ $qbo_tax_id ] ) ? '': $tax_mapped[ $qbo_tax_id ];
-					$product_meta->set_tax_class( $woo_tax_mapped );
+				$qbo_tax_id = !empty($qbo_tax_id) ? $qbo_tax_id : 'no_tax';
+				if (isset($tax_mapped[$qbo_tax_id])) {
+					$woo_tax_mapped = ('standard' == $tax_mapped[$qbo_tax_id]) ? '' : $tax_mapped[$qbo_tax_id];
+					$product_meta->set_tax_class($woo_tax_mapped);
 				}
 
 			}
 
-			if( 'on' == $current_sync_option['quantity']['quantity']){
+			if ('on' == $current_sync_option['quantity']['quantity']) {
 				//Sync quantity is on
-				$product_meta->set_stock( $product->get_quantity() );
-				if( 'on' == $current_sync_option['quantity']['change_status']){
+				$product_meta->set_stock($product->get_quantity());
+				if ('on' == $current_sync_option['quantity']['change_status']) {
 					//Change product status base on quantity is on
-					if( $product->get_quantity() <= 0 ){
+					$product_args['post_status'] = 'publish';
+					$product_meta->set_manage_stock('yes');
+
+					if ($product->get_quantity() <= 0) {
 						$product_args['post_status'] = 'draft';
-						$product_meta->set_manage_stock( 'no' );
-					}else{
-						$product_args['post_status'] = 'publish';
-						$product_meta->set_manage_stock( 'yes' );
+						$product_meta->set_manage_stock('no');
 					}
 
 				}
 			}
 
 			//Setting if product should be virtual or not
-			if( 'Service' == $product->get_product_type() || 'Non-Inventory' == $product->get_product_type()){
-				$product_meta->set_virtual( 'yes' );
-			}else if( 'Inventory' == $product->get_product_type() ){
-				$product_meta->set_virtual( 'no' );
+			if (LS_QBO_ItemType::SERVICE == $product->get_product_type() || LS_QBO_ItemType::NONINVENTORY == $product->get_product_type()) {
+				$product_meta->set_virtual('yes');
+			} else if (LS_QBO_ItemType::INVENTORY == $product->get_product_type()) {
+				$product_meta->set_virtual('no');
 			}
 
 			//Check if product is active in LWS
-			if($product->is_active()){
+			$product_args['post_status'] = 'draft';
+			if ($product->is_active()) {
 				$product_args['post_status'] = 'publish';
-			}else{
-				$product_args['post_status'] = 'draft';
 			}
 
-			if(true == $is_new){
-				if( 'on' == $current_sync_option['product_status'] ){
-					//Tick this option to Set new product to Pending is on
-					$product_args['post_status'] = 'pending';
-				}
+			if (
+				true == $is_new &&
+				'on' == $current_sync_option['product_status']
+			) {
+
+				//Tick this option to Set new product to Pending is on
+				$product_args['post_status'] = 'pending';
 			}
 
 			//Set woocommerce Product to taxable or not
 			$tax_status = ('' == $product->get_tax_name()) ? 'none' : 'taxable';
-			$product_meta->set_tax_status( $tax_status );
+			$product_meta->set_tax_status($tax_status);
 
-			if( 'on' == $current_sync_option['category']){
+			$category = $product->get_categories();
+			if (
+				'on' == $current_sync_option['category'] &&
+				!empty($category['fullyQualifiedName'])
+			) {
 				//Create categories from QBO in WooCommerce is on
-				$category = $product->get_categories();
-				if( isset($category['fullyQualifiedName']) && !empty($category['fullyQualifiedName']) ){
-					LS_Woo_Product::create_category_from_quickbooks_category( $product_meta->product_id , $category['fullyQualifiedName'] );
-				}
+				LS_Woo_Product::create_category_from_quickbooks_category($product_meta->product_id, $category['fullyQualifiedName']);
 			}
 
 			$visibility = ('publish' == $product_args['post_status']) ? 'visible' : '';
@@ -121,7 +125,7 @@ class LS_Woo_Product{
 
 			//Set post id
 			$product_args['ID'] = $product_meta->product_id;
-			wp_update_post( $product_args, true);
+			wp_update_post($product_args, true);
 		}
 
 	}
@@ -240,6 +244,27 @@ class LS_Woo_Product{
 						", ARRAY_A);
 
 		if ( $product_ids ) return  $product_ids;
+
+		return null;
+	}
+
+	public static function get_product_id_by_quickbooks_id( $quickbook_product_id ){
+		global $wpdb;
+
+		$product_id =	$wpdb->get_var(
+			$wpdb->prepare("
+						SELECT post.ID
+						FROM $wpdb->posts AS post
+						INNER JOIN $wpdb->postmeta AS pmeta ON (post.ID = pmeta.post_id)
+						WHERE
+							pmeta.meta_key='_ls_pid' AND
+							pmeta.meta_value=%s AND
+							post.post_type IN('product','product_variation')
+						LIMIT 1"
+				, $quickbook_product_id )
+		);
+
+		if ( $product_id ) return  $product_id;
 
 		return null;
 	}

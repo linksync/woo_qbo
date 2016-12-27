@@ -153,7 +153,7 @@ class LS_QBO_Sync{
 
 				$qbo_product_id = $product_meta->get_product_id();
 				if(!empty($qbo_product_id)){
-					$json_product->set_id(get_qbo_id($qbo_product_id));
+					$json_product->set_id($qbo_product_id);
 				}
 
 				$json_product->set_name( $product->get_title() );
@@ -190,22 +190,17 @@ class LS_QBO_Sync{
 				}
 
 				//Setting product type in qbo
+				$json_product->set_product_type( LS_QBO_ItemType::NONINVENTORY );
+				if( $product->is_virtual() ){
+					$json_product->set_product_type( LS_QBO_ItemType::SERVICE );
+					$json_product->set_quantity(null);
+				}
 				if( LS_QBO()->is_qbo_plus()){
 
+					$json_product->set_product_type( LS_QBO_ItemType::INVENTORY );
 					if( $product->is_virtual() ){
-						$json_product->set_product_type( 'Service' );
+						$json_product->set_product_type( LS_QBO_ItemType::SERVICE );
 						$json_product->set_quantity(null);
-					}else if( !$product->is_virtual()){
-						$json_product->set_product_type( 'Inventory' );
-					}
-
-				}else if( !LS_QBO()->is_qbo_plus() ){
-
-					if( $product->is_virtual() ){
-						$json_product->set_product_type( 'Service' );
-						$json_product->set_quantity(null);
-					}else if( !$product->is_virtual()){
-						$json_product->set_product_type( 'Non-Inventory' );
 					}
 
 				}
@@ -246,7 +241,7 @@ class LS_QBO_Sync{
 				$result = LS_QBO()->api()->product()->save_product( $j_product );
 
 				if(!empty($result['id'])){
-					$product_meta->update_product_id( $result['id'] );
+					$product_meta->update_product_id( get_qbo_id($result['id']) );
 
 					$product = new LS_Simple_Product($result);
 					$product_meta->update_tax_id($product->get_tax_id());
@@ -260,6 +255,7 @@ class LS_QBO_Sync{
 					$product_meta->update_income_account_id($product->get_income_account_id());
 					$product_meta->update_expense_account_id($product->get_expense_account_id());
 					$product_meta->update_asset_account_id($product->get_asset_account_id());
+					$product_meta->update_product_type($product->get_product_type());
 
 					LSC_Log::add_dev_success('LS_QBO_Sync::import_single_product_to_qbo', 'Product was imported to QuickBooks <br/> Product json being sent <br/>'.$j_product.'<br/> Response: <br/>'.json_encode($result));
 
@@ -351,12 +347,17 @@ class LS_QBO_Sync{
 					$taxRate = (isset($qbo_tax[3])) ? $qbo_tax[3] : $taxRate;
 				}
 
-				if (!empty($price) && !empty($qbo_tax[3])) {
-					$taxValue = ($price * $qbo_tax[3]);
+				$qboTaxName = $product_meta->get_tax_name();
+				if ('none' == $product_meta->get_tax_status() && empty($qboTaxName) ) {
+					$taxName = null;
+					$taxId = null;
+					$taxRate = null;
+					$taxValue = null;
 				}
 
+
 				$products[] = array(
-					'id'				=>	get_qbo_id($product_meta->get_product_id()),
+					'id'				=>	$product_meta->get_product_id(),
 					'sku'				=>	$pro_object->get_sku(),
 					'title'				=>	$pro_object->get_title(),
 					'price'				=>	$price,
@@ -462,12 +463,8 @@ class LS_QBO_Sync{
 
 			$qbo_tax = LS_Woo_Tax::get_mapped_quickbooks_tax_for_shipping($tax_mapping, $order_tax);
 			$shipping_cost = $order->get_total_shipping();
-			$shipping_with_tax = $order->get_shipping_tax();
-			if ($shipping_with_tax > 0) {
-				if (!empty($shipping_cost) && !empty($qbo_tax[3])) {
-					$taxValue_shipping = ((float)$shipping_cost * (float)$qbo_tax[3]);
-				}
-			}
+			$shipping_tax = $order->get_shipping_tax();
+
 
 			$products[] = array(
 				"price" => isset($shipping_cost) ? $shipping_cost : null,
@@ -476,7 +473,7 @@ class LS_QBO_Sync{
 				'taxName' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
 				'taxId' => ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null,
 				'taxRate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
-				'taxValue' => isset($taxValue_shipping) ? $taxValue_shipping : null
+				'taxValue' => null
 			);
 		}
 
@@ -599,12 +596,8 @@ class LS_QBO_Sync{
 		$product_options = LS_QBO()->product_option();
 		$current_sync_option = $product_options->get_current_product_syncing_settings();
 
-		if( 'disabled' != $current_sync_option['sync_type'] ){
-
-			if( 'two_way' == $current_sync_option['sync_type'] ){
-				remove_action( 'save_post', array( 'LS_QBO_Sync','save_product' ), 999 );
-			}
-
+		if ('two_way' == $current_sync_option['sync_type']) {
+			remove_action('save_post', array('LS_QBO_Sync', 'save_product'), 999);
 		}
 	}
 
@@ -612,12 +605,8 @@ class LS_QBO_Sync{
 		$product_options = LS_QBO()->product_option();
 		$current_sync_option = $product_options->get_current_product_syncing_settings();
 
-		if( 'disabled' != $current_sync_option['sync_type'] ){
-
-			if( 'two_way' == $current_sync_option['sync_type'] || 'qbo_to_woo' == $current_sync_option['sync_type'] ){
-				add_action( 'save_post', array( 'LS_QBO_Sync','save_product' ), 999, 3 );
-			}
-
+		if ('two_way' == $current_sync_option['sync_type']) {
+			add_action('save_post', array('LS_QBO_Sync', 'save_product'), 999, 3);
 		}
 	}
 
@@ -633,8 +622,11 @@ class LS_QBO_Sync{
 			'since'	=>	$last_sync
 		);
 		$products 	=	LS_QBO()->api()->product()->get_product( $params );
+		LSC_Log::add_dev_success(
+			'LS_QBO_Sync::product_to_woo_since_last_update',
+			'Parameters being used: '.json_encode($params).'<br/>Product Get Response: <br/>'.json_encode($products)
+		);
 		if( !empty($products['products']) ){
-			LSC_Log::add_dev_success( 'LS_QBO_Sync::product_to_woo_since_last_update', 'Parameters being used: '.json_encode($params).'<br/>Product update <br/>'.json_encode($products) );
 
 			foreach( $products['products'] as $product ){
 
@@ -689,8 +681,15 @@ class LS_QBO_Sync{
 			}
 			$product_name = remove_escaping_str($product_name);
 			$product_id = LS_Woo_Product::get_product_id_by_name($product_name);
+
 		}else if( 'sku' == $match_with){
 			$product_id = LS_Woo_Product::get_product_id_by_sku($product->get_sku());
+		}
+
+		//Last Check if the product exist in woocommerce to attempt query product id using quickbooks id
+		if(empty($product_id)){
+			$qboId = get_qbo_id($product->get_id());
+			$product_id = LS_Woo_Product::get_product_id_by_quickbooks_id($qboId);
 		}
 
 		$deleted = false;

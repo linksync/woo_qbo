@@ -19,7 +19,7 @@ class Linksync_installation {
 		}
 	}
 	
-	public static function wizard_handler()
+	public static function wizard_handler($res)
 	{
 		?>
 			<p id="logo"><img src="<?php echo LS_PLUGIN_URL ?>assets/images/linksync/logo.png" alt="" /></p>
@@ -38,12 +38,20 @@ class Linksync_installation {
 							
 						case 2:
 							// Set up Product syncing options
-							include_once(LS_PLUGIN_DIR.'includes/view/wizard/product-syncing.php');
+							$view_pcontent = '';
+							if(isset($res['connected_to']) && $res['connected_to'] == 'QuickBooks Online') {
+								$view_pcontent = '-qbo';
+							}
+							include_once(LS_PLUGIN_DIR.'includes/view/wizard/product-syncing'. $view_pcontent .'.php');
 							break;
 							
 						case 3:
 							// Set up Order syncing options
-							include_once(LS_PLUGIN_DIR.'includes/view/wizard/order-syncing.php');
+							$view_ocontent = '';
+							if(isset($res['connected_to']) && $res['connected_to'] == 'QuickBooks Online') {
+								$view_ocontent = '-qbo';
+							}
+							include_once(LS_PLUGIN_DIR.'includes/view/wizard/order-syncing'. $view_ocontent .'.php');
 							break;
 					}
 					

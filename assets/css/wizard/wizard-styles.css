@@ -30,7 +30,7 @@
     cursor: pointer;
 }
 
-.update-nag, .updated, #adminmenumain, #wpfooter, #wpadminbar {
+.update-nag, .updated, #adminmenumain, #wpfooter, #wpadminbar, #screen-meta, #screen-meta-links {
 	display:none;
 }
 

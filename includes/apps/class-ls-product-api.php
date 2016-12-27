@@ -28,7 +28,7 @@ class LS_Product_Api{
 			$str_params = '';
 			if(is_array($params)){
 				foreach($params as $key => $value){
-					$str_params .= $key.'='.$value.'&';
+					$str_params .= $key.'='.urlencode($value).'&';
 				}
 
 			}else{
@@ -36,6 +36,7 @@ class LS_Product_Api{
 			}
 			//Remove last & in the params string
 			$str_params = rtrim($str_params, '&');
+
 			$result = $this->api->get('product?'.$str_params);
 
 		}else {

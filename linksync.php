@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.1-beta
+  Version: 2.5.2-beta
  */
 include 'ls-constants.php';
 include 'ls-functions.php';
@@ -29,7 +29,7 @@ class linksync {
 	/**
 	 * @var string
 	 */
-	public static $version = '2.5.1';
+	public static $version = '2.5.2';
 
     public function __construct() {
         add_action('plugins_loaded', array('linksync', 'check_required_plugins')); # In order to check WooCommerce Plugin existence  
@@ -47,6 +47,9 @@ class linksync {
          * Add Styles and Javascript files to wp-admin area
          */
          add_action( 'admin_enqueue_scripts', array($this, 'ls_custom_styles_and_scripts') );
+		 
+		add_action( 'init', array(&$this, 'wizard_process'), 1 );
+		Linksync_installation::init();
     }
 
     /**
@@ -78,6 +81,9 @@ class linksync {
 
 
 		require_once LS_INC_DIR. 'apps/qbo/qbo.php';
+		
+		include_once( LS_PLUGIN_DIR .'classes/class.linksync-install.php' );
+		include_once( LS_PLUGIN_DIR .'classes/wizard.php' );
     }
 
 	/**
@@ -142,6 +148,7 @@ class linksync {
             wp_enqueue_style( 'ls-jquery-ui', LS_ASSETS_URL.'css/jquery-ui/jquery-ui.css' );
             wp_enqueue_style( 'ls-tab-configuration-style', LS_ASSETS_URL.'css/admin-tabs/ls-plugins-tab-configuration.css' );
 
+			
 		   $connected_to = get_option('linksync_connectedto');
 
 		   if( is_vend() ){
@@ -151,7 +158,11 @@ class linksync {
 			   LS_QBO()->enqueue_scripts_and_styles();
 
 		   }
+			
        }    
+		if(isset($_GET['page']) && $_GET['page'] == 'linksync-wizard') {
+			wp_enqueue_style('admin-linksync-style', LS_ASSETS_URL.'css/wizard/wizard-styles.css');
+		}
     }
 
 
@@ -308,6 +319,8 @@ class linksync {
         if (isset($check_laid) && !empty($check_laid)) {
             self::checkForConnection($check_laid);
         }
+		
+		add_option( 'linksync_do_activation_redirect', 'linksync-wizard' );
 
     }
 
@@ -347,8 +360,41 @@ class linksync {
     public function linksync_add_menu() {
         if (get_option('linksync_wooVersion') == 'off') {
             $my_admin_page = add_submenu_page('woocommerce', 'linksync', 'linksync', 'manage_options', 'linksync', array(&$this, 'linksync_settings'));
+			$wizard_page = add_submenu_page(null, 'linksync wizard', 'linksync wizard', 'manage_options', 'linksync-wizard', array(&$this, 'linksync_wizard'));
         }
     }
+	
+	public function wizard_process()
+	{
+		if(isset($_POST['process']) && $_POST['process'] == 'wizard') {		
+			if(isset($_POST['action'])) {			
+				Wizard_Model::processall();
+			}
+		}
+	}
+	
+	public function linksync_wizard()
+	{
+		$apikey = get_option('linksync_laid');
+		$response = false;
+		if(!empty($apikey)) {
+			$response = LS_ApiController::check_api_key($apikey);
+			if(isset($response['linksync_status']) && $response['linksync_status'] == 'Inactive' && isset($_GET['step']) && $_GET['step'] > 1) {
+				update_option( 'linksync_error_message', $response['lws_laid_key_info']['userMessage']);
+				wp_redirect( admin_url( 'admin.php?page=linksync-wizard' ) );
+				exit();
+			}
+		} 
+		
+		if(empty($apikey) && isset($_GET['step']) && $_GET['step'] > 1) {
+			update_option( 'linksync_error_message', 'Please provide the valid API Key before proceeding to next step.');
+			wp_redirect( admin_url( 'admin.php?page=linksync-wizard' ) );
+			exit();
+		}
+		
+		// Display UI
+		Linksync_installation::wizard_handler($response);
+	}
 
     public static function linksync_help() {
         $screen = get_current_screen();
@@ -377,7 +423,7 @@ class linksync {
         if (is_admin()) { 
             $className = PucFactory::getLatestClassVersion('PucGitHubChecker');
             $myUpdateChecker = new $className(
-                            'https://github.com/linksync/woo',
+                            'https://github.com/linksync/woo_qbo',
                             __FILE__,
                             'master'
             );
@@ -499,9 +545,7 @@ class linksync {
                             $linksync_version = NULL;
                         }
                         update_option('linksync_version', $linksync_version);
-                        $plugin_file = dirname(__FILE__) . '/linksync.php';
-                        $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-                        $running_version = $plugin_data['Version'];
+                        $running_version = linksync::$version;
                         if ($linksync_version > $running_version) {
                             update_option('linksync_update_notic', 'on');
                         } else {
@@ -718,9 +762,7 @@ class linksync {
                 if (isset($status) && isset($app_name_status) && $status == 'Active' && $app_name_status == 'Active') {
 // if (isset($result['connected_app_version']) && !empty($result['connected_app_version'])) {woocommerce/woocommerce.php
 
-                    $plugin_file = dirname(__FILE__) . '/linksync.php';
-                    $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-                    $linksync_version = $plugin_data['Version'];
+                    $linksync_version = linksync::$version;
                     update_option('linksync_version', $linksync_version);
                     $webhook = $apicall->webhookConnection(content_url() . '/plugins/linksync/update.php?c=' . get_option('webhook_url_code'), $linksync_version, 'no');
                     if (isset($webhook) && !empty($webhook)) {
@@ -865,9 +907,7 @@ if (get_option('order_sync_type') == 'disabled') {
 if (get_option('linksync_update_notic') == 'on') {
     require_once ABSPATH . 'wp-admin/includes/plugin.php';
     $linksync_version = get_option('linksync_version');
-    $plugin_file = dirname(__FILE__) . '/linksync.php';
-    $plugin_data = get_plugin_data($plugin_file, $markup = true, $translate = true);
-    $running_version = $plugin_data['Version'];
+    $running_version = linksync::$version;
     if ($linksync_version > $running_version) {
         update_option('linksync_update_notic', 'on');
     } else {
