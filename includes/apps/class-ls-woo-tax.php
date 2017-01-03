@@ -32,7 +32,7 @@ class LS_Woo_Tax{
             foreach ($orderTax as $tax_label) {
                 $tax_line_item = new LS_Woo_Order_Line_Item($tax_label);
 
-                if('' == $tax_line_item->lineItem['shipping_tax_amount']){
+                if(empty($tax_line_item->lineItem['shipping_tax_amount'])){
                     return '';//No tax was set up for shipping
                 }
                 $tax_info = LS_Woo_Tax::get_tax_rate_by_name_and_class(

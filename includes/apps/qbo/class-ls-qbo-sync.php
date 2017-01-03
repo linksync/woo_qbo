@@ -108,15 +108,24 @@ class LS_QBO_Sync{
 		$product = wc_get_product($product_id);
 		$has_children = $product->has_child();
 
-		if(true == $has_children){
-			$variation_ids = $product->get_children();
-			if(!empty($variation_ids)){
-				foreach($variation_ids as $variation_id){
-					LS_QBO_Sync::import_single_product_to_qbo( $variation_id );
+		if (true == $product->is_type('variable')) {
+			$product_meta = new LS_Product_Meta($product_id);
+			$sku = $product->get_sku();
+			if (empty($sku)) {
+				$sku = 'sku_' . $product_id;
+				$product_meta->update_sku($sku);
+			}
+
+			if (true == $has_children) {
+				$variation_ids = $product->get_children();
+				if (!empty($variation_ids)) {
+					foreach ($variation_ids as $variation_id) {
+						LS_QBO_Sync::import_single_product_to_qbo($variation_id);
+					}
 				}
 			}
-		}else{
-			LS_QBO_Sync::import_single_product_to_qbo( $product_id );
+		} elseif (true == $product->is_type('simple')) {
+			LS_QBO_Sync::import_single_product_to_qbo($product_id);
 		}
 
 
@@ -153,7 +162,7 @@ class LS_QBO_Sync{
 
 				$qbo_product_id = $product_meta->get_product_id();
 				if(!empty($qbo_product_id)){
-					$json_product->set_id($qbo_product_id);
+					$json_product->set_id(get_qbo_id($qbo_product_id));
 				}
 
 				$json_product->set_name( $product->get_title() );
@@ -180,30 +189,32 @@ class LS_QBO_Sync{
 
 				}
 
+				$productQuantityOption = $product_options->quantity();
+				$isProductVirtual = $product->is_virtual();
+				$isQuickBooksPlus = LS_QBO()->is_qbo_plus();
+				$qboProductId = $product_meta->get_product_id();
+				$isNewProduct = empty($qboProductId) ? true : false;
 
-				if( 'on' == $product_options->quantity() ){
+				$json_product->set_product_type(LS_QBO_ItemType::NONINVENTORY);
+				if (true == $isNewProduct && $isProductVirtual) {
+					$json_product->set_product_type(LS_QBO_ItemType::SERVICE);
+				}
+
+
+				if ('on' == $productQuantityOption) {
 					$stock_quantity = $product->get_stock_quantity();
 
-					$quantity = !empty($stock_quantity) ? $stock_quantity : 0 ;
-					$json_product->set_quantity( $quantity );
+					$quantity = !empty($stock_quantity) ? $stock_quantity : 0;
+					$json_product->set_quantity($quantity);
+					$json_product->set_product_type(LS_QBO_ItemType::INVENTORY);
 
-				}
-
-				//Setting product type in qbo
-				$json_product->set_product_type( LS_QBO_ItemType::NONINVENTORY );
-				if( $product->is_virtual() ){
-					$json_product->set_product_type( LS_QBO_ItemType::SERVICE );
-					$json_product->set_quantity(null);
-				}
-				if( LS_QBO()->is_qbo_plus()){
-
-					$json_product->set_product_type( LS_QBO_ItemType::INVENTORY );
-					if( $product->is_virtual() ){
-						$json_product->set_product_type( LS_QBO_ItemType::SERVICE );
-						$json_product->set_quantity(null);
+					if ($isNewProduct && $isQuickBooksPlus && $isProductVirtual) {
+						$json_product->set_product_type(LS_QBO_ItemType::SERVICE);
+						$json_product->remove_quantity();
 					}
 
 				}
+
 
 				$sku = $product->get_sku();
 				if (empty($sku)) {
@@ -357,7 +368,7 @@ class LS_QBO_Sync{
 
 
 				$products[] = array(
-					'id'				=>	$product_meta->get_product_id(),
+					'id'				=>	get_qbo_id($product_meta->get_product_id()),
 					'sku'				=>	$pro_object->get_sku(),
 					'title'				=>	$pro_object->get_title(),
 					'price'				=>	$price,

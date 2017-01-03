@@ -13,11 +13,24 @@ class LS_Json_Product_Factory{
 	}
 
 	/**
+	 * Remove id
+	 */
+	public function remove_id()
+	{
+		$this->unSetJsonKey('id');
+	}
+
+	/**
 	 * Set the value of name
 	 * @param $name
 	 */
 	public function set_name( $name ){
 		$this->set('name', $name );
+	}
+
+	public function remove_name()
+	{
+		$this->unSetJsonKey('name');
 	}
 
 	/**
@@ -28,6 +41,11 @@ class LS_Json_Product_Factory{
 		$this->set( 'description', $description );
 	}
 
+	public function remove_description()
+	{
+		$this->unSetJsonKey('description');
+	}
+
 	/**
 	 * Set the value of list_price
 	 * @param $list_price
@@ -36,12 +54,22 @@ class LS_Json_Product_Factory{
 		$this->set( 'list_price', $list_price );
 	}
 
+	public function remove_list_price()
+	{
+		$this->unSetJsonKey('list_price');
+	}
+
 	/**
 	 * Set the value of sell_price
 	 * @param $sell_price
 	 */
 	public function set_sell_price( $sell_price ){
 		$this->set( 'sell_price', $sell_price );
+	}
+
+	public function remove_sell_price()
+	{
+		$this->unSetJsonKey('sell_price');
 	}
 
 	/**
@@ -76,13 +104,17 @@ class LS_Json_Product_Factory{
 		$this->set('tax_id', $tax_id);
 	}
 
-
 	/**
 	 * Set the value of quantity
 	 * @param $quantity
 	 */
 	public function set_quantity( $quantity ){
 		$this->set( 'quantity', $quantity );
+	}
+
+	public function remove_quantity()
+	{
+		$this->unSetJsonKey('quantity');
 	}
 
 	/**
@@ -149,6 +181,18 @@ class LS_Json_Product_Factory{
 	public function set( $key, $value ){
 		if( !empty($key) ){
 			$this->json_product[$key] = $value;
+		}
+	}
+
+	/**
+	 * Remove Json key if exist
+	 *
+	 * @param $key
+	 */
+	public function unSetJsonKey($key)
+	{
+		if (!empty($key) && isset($this->json_product[$key])) {
+			unset($this->json_product[$key]);
 		}
 	}
 
