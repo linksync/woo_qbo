@@ -369,6 +369,7 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 			if(is_qbo()){
 				include_once LS_INC_DIR. 'apps/qbo/class-ls-qbo-sync.php';
 				include_once LS_INC_DIR. 'apps/class-ls-notice.php';
+				include_once LS_INC_DIR. 'apps/qbo/class-ls-qbo-ajax.php';
 			}
 
 
@@ -461,10 +462,59 @@ if ( in_array( 'woocommerce/woocommerce.php', apply_filters( 'active_plugins', g
 			<?php
 		}
 
-		public function show_woo_duplicate_products( $list ){
+		public function show_woo_duplicate_products( $list, $emptySkus = array(), $duplicateSkus = array() ){
 			?>
 			<div>
-				<p>You have duplicate products or empty skus in your <a target="_blank" href="<?php echo admin_url('edit.php?post_type=product'); ?>">Woocommerce</a></p>
+                <p>
+                    You have duplicate products or empty skus in your
+                    <a target="_blank"
+                       href="<?php echo admin_url('edit.php?post_type=product'); ?>">Woocommerce</a>
+
+                    <table>
+                        <tr>
+                            <?php
+                                if(!empty($emptySkus)){
+                                    ?>
+                                    <td>
+                                        <form method="post" id="frm-set-sku-automatically">
+                                            <input id="set-sku-automatically"
+                                                   class="button button-primary button-large "
+                                                   type="submit"
+                                                   name="setskuautomatically"
+                                                   value="Set Empty SKU Automatically"
+                                                   style="float: left;">
+
+                                            <span id="ls-spinner" class="spinner is-active"
+                                                  style="float: left;display: none;"></span><br/><br/>
+                                        </form>
+                                    </td>
+                                    <?php
+                                }
+
+                                if(!empty($duplicateSkus)){
+                                    ?>
+                                    <td>
+                                        <form method="post" id="frm-append-productid-to-duplicate-sku">
+                                            <input id="append-sku-automatically"
+                                                   class="button button-primary button-large "
+                                                   type="submit"
+                                                   name="setskuautomatically"
+                                                   value="Make SKU Unique"
+                                                   style="float: left;">
+
+                                            <span id="ls-spinner2" class="spinner is-active"
+                                                  style="float: left;display: none;"></span><br/><br/>
+                                        </form>
+                                    </td>
+                                    <?php
+                                }
+                            ?>
+
+
+                        </tr>
+                    </table>
+
+                </p>
 				<table class="widefat">
 					<thead>
 						<tr>

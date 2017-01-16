@@ -56,7 +56,7 @@ class LS_Woo_Product{
 			}
 
 			if ('on' == $productSyncingDescriptionOption) {
-				$product_args['post_content'] = esc_html($product->get_description());
+				$product_args['post_content'] = $product->get_description();
 			}
 
 			if ('on' == $productSyncingPriceOption) {

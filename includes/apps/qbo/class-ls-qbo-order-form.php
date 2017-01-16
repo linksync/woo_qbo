@@ -600,9 +600,10 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
 		if('sku' == $match_with ){
 
 			$duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
-			$products_data = array_merge($duplicate_products, LS_Woo_Product::get_woo_empty_sku());
+			$emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();
+			$products_data = array_merge($duplicate_products, $emptyProductSkus);
 			if( count($products_data) > 0){
-				LS_QBO()->show_woo_duplicate_products( $products_data );
+				LS_QBO()->show_woo_duplicate_products( $products_data, $emptyProductSkus, $duplicate_products );
 				die();
 			}
 		}

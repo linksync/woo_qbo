@@ -331,8 +331,10 @@ class LS_QBO_Sync{
 		if( !empty($items) ){
 
 			foreach( $items as $item ){
-				if (isset($item['variation_id']) && !empty($item['variation_id'])) {
+				if (!empty($item['variation_id'])) {
 					$product_id = $item['variation_id'];
+					$parentId = $item['product_id'];
+					$parentVariant = new WC_Product($parentId);
 				} else {
 					$product_id = $item['product_id'];
 				}
@@ -359,7 +361,12 @@ class LS_QBO_Sync{
 				}
 
 				$qboTaxName = $product_meta->get_tax_name();
-				if ('none' == $product_meta->get_tax_status() && empty($qboTaxName) ) {
+				$productTaxStatus = $product_meta->get_tax_status();
+				if(isset($parentVariant)){
+				    $productTaxStatus = $parentVariant->get_tax_status();
+				}
+
+				if ('none' == $productTaxStatus && empty($qboTaxName) ) {
 					$taxName = null;
 					$taxId = null;
 					$taxRate = null;
