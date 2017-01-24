@@ -229,41 +229,50 @@ class LS_QBO_Product_Option{
 		return $this->change_product_status();
 	}
 
-	public function inventory_asset_account(){
-		return get_option( 'ls_ps_qbo_inventory_asset_account', 'Inventory Asset' );
-	}
+    public function inventory_asset_account($default = '')
+    {
+        return get_option('ls_ps_qbo_inventory_asset_account', $default);
+    }
 
-	public function update_inventory_asset_account( $inventory_asset_account ){
+    public function update_inventory_asset_account($inventory_asset_account)
+    {
 
-		if( is_numeric($inventory_asset_account) ){
-			update_option( 'ls_ps_qbo_inventory_asset_account', $inventory_asset_account );
-		}
+        if (is_numeric($inventory_asset_account)) {
+            update_option('ls_ps_qbo_inventory_asset_account', $inventory_asset_account);
+        }
 
-		return $this->inventory_asset_account();
+        return $this->inventory_asset_account();
 
-	}
+    }
 
-	/**
-	 * Get selected Expense Account option
-	 * @return string
-	 */
-	public function expense_account(){
-		return get_option( 'ls_ps_qbo_expense_account' );
-	}
+    public function delete_inventory_asset_account()
+    {
+        return delete_option('ls_ps_qbo_inventory_asset_account');
+    }
 
-	public function update_expense_account( $expense_account ){
 
-		update_option( 'ls_ps_qbo_expense_account', $expense_account );
-		return $this->expense_account();
-	}
+    public function expense_account($default = '')
+    {
+        return get_option('ls_ps_qbo_expense_account', $default);
+    }
 
-	/**
-	 * Default setting for this field is dependent on whether ‘Quantity’ option above is enabled
-	 * @return string
-	 */
-	public function income_account(){
-		return get_option( 'ls_psqbo_income_account' );
-	}
+    public function update_expense_account($expense_account)
+    {
+
+        update_option('ls_ps_qbo_expense_account', $expense_account);
+        return $this->expense_account();
+    }
+
+    public function delete_expense_account()
+    {
+        return delete_option('ls_ps_qbo_expense_account');
+    }
+
+
+    public function income_account($default = '')
+    {
+        return get_option('ls_psqbo_income_account', $default);
+    }
 
 	/**
 	 * Update selected income account
@@ -273,6 +282,11 @@ class LS_QBO_Product_Option{
 	public function update_income_account( $income_account ){
 		update_option( 'ls_psqbo_income_account', $income_account );
 		return $this->income_account();
+	}
+
+    public function delete_income_account()
+    {
+        return delete_option('ls_psqbo_income_account');
 	}
 
 	/**

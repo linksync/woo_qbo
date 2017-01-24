@@ -47,12 +47,14 @@
             var btn_products_from_qbo   =   $( '#btn_sync_products_from_qbo' );
             var btn_products_to_qbo     =   $( '#btn_sync_products_to_qbo' );
             var btn_container           =   $( '#syncing_bottons' );
+            var tbl_to_qbo_tax_mapping  =   $( '#ls-tax-map-to-qbo' );
 
             if( sync_type == sync_types[0] ){
 
                 form_container.slideDown(500);
                 btn_products_from_qbo.show();
                 btn_products_to_qbo.fadeIn();
+                tbl_to_qbo_tax_mapping.show();
                 btn_container.fadeIn();
 
             }else if( sync_type == sync_types[1] ){
@@ -60,6 +62,7 @@
                 form_container.slideDown(500);
                 btn_products_to_qbo.fadeOut();
                 btn_products_from_qbo.show();
+                //tbl_to_qbo_tax_mapping.hide();
                 btn_container.fadeIn();
 
             }else if( sync_type == sync_types[2] ){
@@ -115,6 +118,7 @@
          */
         ls_wrapper.on('click', '.product_from_qbo', function(){
             product_from_qbo_to_woo();
+            done_required_sync();
         });
 
         /**
@@ -122,6 +126,7 @@
          */
         ls_wrapper.on('click', '.product_to_qbo', function(){
             product_from_woo_to_qbo();
+            done_required_sync();
         });
 
         ls_wrapper.on('click', '#btn_sync_products_from_qbo', function(){
@@ -152,6 +157,15 @@
             sync_all_products_from.hide();
             ls_pop_ups.fadeIn();
         });
+
+        function done_required_sync() {
+            var data = {
+                action : 'qbo_done_syncing_required'
+            };
+            post_data(data, function (data) {
+                $('.require-resync').hide();
+            });
+        }
 
         /**
          * @param page Number

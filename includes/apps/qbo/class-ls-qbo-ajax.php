@@ -7,6 +7,15 @@ class LS_QBO_Ajax
     {
         add_action( 'wp_ajax_qbo_set_empty_sku_automatically', array( $this, 'setEmptySkuAutomatically' ) );
         add_action( 'wp_ajax_qbo_append_product_id_to_duplicate_skus', array( $this, 'appendProductIdToDuplicateSku' ) );
+        add_action( 'wp_ajax_qbo_done_syncing_required', array( $this, 'doneRequiredResync' ) );
+
+
+    }
+
+    public function doneRequiredResync()
+    {
+        LS_QBO()->options()->done_required_sync();
+        die();
     }
 
     public function setEmptySkuAutomatically()

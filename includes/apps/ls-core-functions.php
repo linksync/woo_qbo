@@ -676,9 +676,16 @@ function ls_selected_order_status_to_trigger_sync(){
 }
 
 function get_qbo_id( $id ){
-	$laid = linksync::get_current_laid();
+	$laid = LS_ApiController::get_current_laid();
 	if( !empty($laid) ){
 		return str_replace( $laid, '', $id );
 	}
 	return $id;
+}
+
+if (!function_exists('array_udiff_custom_compare_product_id')) {
+    function array_udiff_custom_compare_product_id($a, $b)
+    {
+        return $a['ID'] - $b['ID'];
+    }
 }

@@ -31,14 +31,17 @@ if (isset($_POST['add_apiKey'])) {
                     'linksync_connectionwith' => $connected_with
                 ));
                 LS_ApiController::update_webhook_connection();
+                $response = 'API Key has been added successfully !';
+                $class1 = 'error';
+                $class2 = 'updated';
 
             } else if ('Vend' == $connected_to || 'Vend' == $connected_with) {
 
                 $ls_api = LS_ApiController::get_key_info($_POST['apikey']);
 
                 $result = linksync::checkForConnection($_POST['apikey']);
-                if (linksync::get_current_laid() == '') {
-                    linksync::update_current_laid($_POST['apikey']);
+                if (LS_ApiController::get_current_laid() == '') {
+                    LS_ApiController::update_current_laid($_POST['apikey']);
                 }
                 $class1 = 'error';
                 $class2 = 'updated';
@@ -75,6 +78,7 @@ if (isset($_POST['add_apiKey'])) {
 // End - Adding API Key by Pop UP
 }
 
+
 if (isset($_POST['apikey_update'])) {
 
     if (!empty($_POST['apikey'])) {
@@ -89,22 +93,79 @@ if (isset($_POST['apikey_update'])) {
             $response = 'Update Rejected. ' . $ls_api['userMessage'];
 
         } else {
+            $connected_to = LS_ApiController::get_connected_app($ls_api['connected_app']);
+            $connected_with = LS_ApiController::get_connected_app($ls_api['app']);
 
-            $result = linksync::checkForConnection($_POST['apikey']);
-            if (isset($result['success'])) {
-                $status = 'Connected';
+            if ('QuickBooks Online' == $connected_to || 'QuickBooks Online' == $connected_with) {
+
+                $laid_update = LS_ApiController::update_laid($_POST['apikey']);
+                if(isset($laid_update['is_new']) && $laid_update['is_new']){
+                    $qbo_api = LS_QBO()->api();
+                    $product_options = LS_QBO()->product_option();
+                    $accounts_error = '';
+
+                    set_time_limit(0);
+                    $product_options->delete_expense_account();
+                    $product_options->delete_income_account();
+                    $product_options->delete_inventory_asset_account();
+
+                    $assetAccounts = $qbo_api->get_assets_accounts();
+                    if(!empty($assetAccounts[0]['id'])){
+                        $product_options->update_inventory_asset_account($assetAccounts[0]['id']);
+                    }elseif(empty($assetAccounts[0]['id'])){
+                        $accounts_error .= 'Please check your QuickBooks Inventory Asset Account to sync products properly.<br/>';
+                    }
+
+                    $expenseAccounts = $qbo_api->get_expense_accounts();
+                    if(!empty($expenseAccounts[0]['id'])){
+                        $product_options->update_expense_account($expenseAccounts[0]['id']);
+                    }elseif (empty($expenseAccounts[0]['id'])){
+                        $accounts_error .= 'Please check your QuickBooks Expense Account to sync products properly.<br/>';
+                    }
+
+                    $incomeAccounts = $qbo_api->get_income_accounts();
+                    if(!empty($incomeAccounts[0]['id'])){
+                        $product_options->update_income_account($incomeAccounts[0]['id']);
+                    }elseif (empty($incomeAccounts[0]['id'])){
+                        $accounts_error .= 'Please check your QuickBooks Income Account to sync products properly.<br/>';
+                    }
+
+                    $require_resync = 'You have changed your API key, please configure your product syncing settings and resync your products';
+                    LS_QBO()->options()->require_syncing($require_resync);
+
+                    if(!empty($accounts_error)){
+                        LS_QBO()->options()->set_accounts_error_message($accounts_error);
+                    }
+
+                    LS_Woo_Product::deleteQuickBookDatas();
+                }
+
+                linksync::update_laid_key_options(array(
+                    'linksync_laid' => $_POST['apikey'],
+                    'linksync_status' => 'Active',
+                    'linksync_frequency' => !empty($laid_key_info['message']) ? $laid_key_info['message'] : '',
+                    'linksync_connectedto' => $connected_to,
+                    'linksync_connectionwith' => $connected_with
+                ));
+                LS_ApiController::update_webhook_connection();
                 $response = 'API key Updated Successfully!! ';
                 $class1 = 'error';
                 $class2 = 'updated';
+            } elseif ('Vend' == $connected_to || 'Vend' == $connected_with) {
 
-                if (is_qbo()) {
-                    LS_ApiController::update_webhook_connection();
+                $result = linksync::checkForConnection($_POST['apikey']);
+                if (isset($result['success'])) {
+                    $status = 'Connected';
+                    $response = 'API key Updated Successfully!! ';
+                    $class1 = 'error';
+                    $class2 = 'updated';
+
+                } else {
+                    $status = 'InValid';
+                    $response = $result['error'];
+                    $class1 = 'updated';
+                    $class2 = 'error';
                 }
-            } else {
-                $status = 'InValid';
-                $response = $result['error'];
-                $class1 = 'updated';
-                $class2 = 'error';
             }
 
         }
@@ -119,10 +180,15 @@ if (isset($_POST['apikey_update'])) {
     ?>
     <script>
         jQuery('#response').removeClass('<?php echo $class1; ?>').addClass('<?php echo $class2; ?>').html("<?php echo $response; ?>").fadeIn().delay(3000).fadeOut(4000);
-
     </script>
     <?php
 }
+
+$product_syncing_form = LS_QBO_Product_Form::instance();
+$product_syncing_form->accounts_error_message();
+$product_syncing_form->require_syncing_error_message();
+
+
 
 ?>
 
@@ -210,7 +276,7 @@ if (isset($_POST['rest'])) {
                          height="16" width="16">
                 </a>
                 <input type="text" size="30" name="apikey"
-                       value="<?php echo linksync::get_current_laid('No api key'); ?>">
+                       value="<?php echo LS_ApiController::get_current_laid('No Api Key'); ?>">
                 <input type="submit" value="Update" class='button color-green' name="apikey_update">
             </div>
         </center>
@@ -240,7 +306,7 @@ if (isset($_POST['rest'])) {
                     <td>
                         <?php
 
-                        $laid = linksync::get_current_laid() != '' ? linksync::get_current_laid() : 'No Api Key';
+                        $laid = LS_ApiController::get_current_laid('No Api Key');
                         echo '<b>', $laid, '</b>';
                         ?>
                         <a href="https://www.linksync.com/help/woocommerce"
@@ -254,7 +320,7 @@ if (isset($_POST['rest'])) {
                     <td>
                         &nbsp;&nbsp;&nbsp;&nbsp;
                         <?php
-                        $count_ls_laidkeys = linksync::get_current_laid();
+                        $count_ls_laidkeys = LS_ApiController::get_current_laid();
 
                         if (empty($count_ls_laidkeys)) { ?>
                             <a href="#" data-reveal-id="myModal" data-animation="fade" class="button button-primary">Add
@@ -415,7 +481,7 @@ if (isset($check_duplicate_tool) && $check_duplicate_tool == 'enabled') {
     if (isset($_POST['confirm'])) {
         if (isset($_POST['product_sku']) && !empty($_POST['product_sku'])) {
             if (isset($_POST['in_vend']) && $_POST['in_vend'] == 'on') {
-                $laids = linksync::get_current_laid();
+                $laids = LS_ApiController::get_current_laid();
                 foreach ($_POST['product_sku'] as $product_sku) {
                     if (!empty($product_sku)) {
                         $response = $apicall->linksync_deleteProduct($product_sku);
@@ -433,7 +499,7 @@ if (isset($check_duplicate_tool) && $check_duplicate_tool == 'enabled') {
                 }
             }
             if (isset($_POST['in_woo']) && !empty($_POST['in_woo'])) {
-                $laids = linksync::get_current_laid();
+                $laids = LS_ApiController::get_current_laid();
                 foreach ($_POST['product_sku'] as $product_id => $product_sku) {
                     if (!empty($product_sku)) {
                         $count = wp_delete_post($product_id); //use the product Id and delete the product

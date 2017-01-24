@@ -35,12 +35,12 @@ class LS_QBO_Api{
 	public function get_all_tax_rate(){
 		$taxes = $this->api->get('qbo/tax');
 
-		array_push($taxes['taxes'], array(
+		/*array_push($taxes['taxes'], array(
 			'id'		=> 'no_tax',
 			'name'		=> 'No Tax',
 			'active'	=> true,
 			'rateValue' => 0
-		));
+		));*/
 
 		return isset($taxes['taxes'])? $taxes['taxes'] : null;
 	}
@@ -213,7 +213,7 @@ class LS_QBO_Api{
 	 * @return array|null
 	 */
 	public function get_laid_info(){
-		$laid = linksync::get_current_laid();
+		$laid = LS_ApiController::get_current_laid();
 		if( !empty($laid) ){
 			return $this->api->get('laid');
 		}

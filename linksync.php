@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.4-beta
+  Version: 2.5.5-beta
  */
 
 /*
@@ -23,7 +23,7 @@ class linksync
     /**
      * @var string
      */
-    public static $version = '2.5.4';
+    public static $version = '2.5.5';
 
     public function __construct()
     {
@@ -110,25 +110,6 @@ class linksync
         }
     }
 
-    /**
-     * Return the current laid key
-     * @return mixed|void
-     */
-    public static function get_current_laid($default = '')
-    {
-        return get_option('linksync_laid', $default);
-    }
-
-    /**
-     * Update current laid key
-     * @param $laid
-     * @return bool
-     */
-    public static function update_current_laid($laid)
-    {
-        return update_option('linksync_laid', trim($laid));
-    }
-
     public function ls_custom_styles_and_scripts()
     {
         //Check for linksync plugin page before adding the styles and scripts to wp-admin
@@ -180,7 +161,7 @@ class linksync
      */
     public static function update_laid_key_options(array $options)
     {
-        linksync::update_current_laid(isset($options['linksync_laid']) ? $options['linksync_laid'] : '');
+        LS_ApiController::update_current_laid(isset($options['linksync_laid']) ? $options['linksync_laid'] : '');
         update_option('linksync_last_test_time', isset($options['linksync_last_test_time']) ?: current_time('mysql'));
         update_option('linksync_status', $options['linksync_status']);
         update_option('linksync_connected_url', LS_ApiController::get_config()['url']);
@@ -320,7 +301,7 @@ class linksync
          */
         LS_Vend_Api_Key::create_table();
 
-        $check_laid = linksync::get_current_laid();
+        $check_laid = LS_ApiController::get_current_laid();
         if (isset($check_laid) && !empty($check_laid)) {
             self::checkForConnection($check_laid);
         }
@@ -584,7 +565,7 @@ class linksync
     {
         require_once ABSPATH . 'wp-admin/includes/plugin.php';
         include_once(dirname(__FILE__) . '/classes/Class.linksync.php');
-        $laidkey = linksync::get_current_laid();
+        $laidkey = LS_ApiController::get_current_laid();
         $testMode = get_option('linksync_test');
         if (!empty($laidkey)) {
             $linksync_class = new linksync_class($laidkey, $testMode);
@@ -908,7 +889,7 @@ class linksync
                     $class2 = 'updated';
                     $class1 = 'error';
                     update_option('linksync_laid', $LAIDKey);
-                    linksync::update_current_laid($LAIDKey);
+                    LS_ApiController::update_current_laid($LAIDKey);
                     $response['success'] = 'Connection is established Successfully!!';
                 } else {
 

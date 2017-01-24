@@ -18,7 +18,7 @@ class LS_ApiController{
 		 */
 		if( is_null( self::$api) ){
 			$apiConfig = self::get_config();
-			$laid_key = linksync::get_current_laid();
+			$laid_key = self::get_current_laid();
 
 			self::$api = new LS_Api( $apiConfig, $laid_key );
 		}
@@ -55,7 +55,7 @@ class LS_ApiController{
 	 */
 	public static function get_key_info($laid_key = null){
 		if( empty($laid_key)){
-			$laid_key = linksync::get_current_laid();
+			$laid_key = self::get_current_laid();
 		}
 		/**
 		 * Require api Config
@@ -75,7 +75,7 @@ class LS_ApiController{
 	 */
 	public static function check_api_key($laid = null){
 		//if laid is null then get the current laid key connection to check its validity
-		$laid_key = (null == $laid) ? linksync::get_current_laid() : $laid;
+		$laid_key = (null == $laid) ? self::get_current_laid() : $laid;
 
 		if (empty($laid_key)) {
 			return 'Empty Api key';
@@ -188,4 +188,80 @@ class LS_ApiController{
 
 		return $apiConfig[$config['api']];
 	}
+
+    /**
+     * Return the current laid key
+     * @return mixed|void
+     */
+    public static function get_current_laid($default = '')
+    {
+        return get_option('linksync_laid', $default);
+    }
+
+    /**
+     * Update current laid key
+     * @param $laid
+     * @return bool
+     */
+    public static function update_current_laid($laid)
+    {
+        return update_option('linksync_laid', trim($laid));
+    }
+
+
+    /**
+     * Return the previous laid key being used
+     * @param string $default
+     * @return mixed|void
+     */
+    public static function get_previous_laid($default = '')
+    {
+        return get_option('linksync_previous_laid', $default);
+    }
+
+
+    /**
+     * Update previouse laid key being used
+     * @param $laid
+     * @return bool
+     */
+    public static function update_previous_laid($laid)
+    {
+        return update_option('linksync_previous_laid', trim($laid));
+    }
+
+
+    public static function is_new($laid)
+    {
+        $current_laid = self::get_current_laid();
+
+        if($laid != $current_laid){
+            return true;
+        }
+
+        return false;
+    }
+
+    public static function update_laid($laid)
+    {
+
+        $return = array();
+
+        $is_new = self::is_new($laid);
+
+        $return['is_new'] = $is_new;
+        if($is_new){
+            $current_laid = self::get_current_laid();
+
+            self::update_current_laid($laid);
+            $return['current_laid'] = $laid;
+
+            self::update_previous_laid($current_laid);
+            $return['previous_laid'] = $current_laid;
+        }
+
+        return $return;
+    }
+
+
 }

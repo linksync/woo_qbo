@@ -125,7 +125,7 @@ class LS_Product_Meta{
 	}
 
 	public function update_tax_value( $meta_value ){
-		return $this->update_meta( '_ls_tax_name', $meta_value );
+		return $this->update_meta( '_ls_tax_value', $meta_value );
 	}
 
 	public function set_tax_name( $meta_value ){

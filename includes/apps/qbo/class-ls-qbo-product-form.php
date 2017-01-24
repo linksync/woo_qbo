@@ -23,8 +23,136 @@ class LS_QBO_Product_Form
     {
         $this->header_title = 'Product Syncing Configuration';
         if (is_null($this->sync_types)) {
-            $this->sync_types = LS_QBO::product_option()->get_all_sync_type();
+            $this->sync_types = LS_QBO_Product_Option::instance()->get_all_sync_type();
         }
+    }
+
+    /**
+     * Show Product syncing form and the users selected option
+     * Default option is also set properly in this method
+     */
+    public function product_syncing_settings()
+    {
+        $product_syncing = LS_QBO_Product_Form::instance();
+        $product_options = LS_QBO()->product_option();
+        $qbo_api = LS_QBO()->api();
+
+        $show_hide_pop_up = 'none';
+        $user_options = null;
+
+
+        /**
+         * Detect Save Changes was submitted
+         */
+        if (isset($_POST['form_items'])) {
+            $product_syncing->update_product_syncing_settings($_POST['form_items']);
+            $show_hide_pop_up = 'block';
+        }
+
+        $sync_type = $product_options->sync_type();
+        $sync_types = $product_options->get_all_sync_type();
+
+        $hide_on_disabled = ($sync_type == $sync_types[2]) ? 'style="display: none;"' : '';
+
+        $user_options = $product_options->get_current_product_syncing_settings();
+        $accounts_error = LS_QBO()->options()->get_accounts_error_message();
+
+        $product_syncing->accounts_error_message();
+        $product_syncing->require_syncing_error_message();
+
+        if (!empty($accounts_error)) {
+            $show_hide_pop_up = 'none';
+        }
+        $user_options['pop_up_style'] = $show_hide_pop_up;
+
+        $user_options['qbo_info'] = get_option('ls_qbo_info');
+        $user_options['assets_account'] = get_option('ls_asset_accounts');
+        $user_options['expense_account'] = get_option('ls_expense_accounts');
+        $user_options['income_accounts'] = get_option('ls_income_accounts');
+        $user_options['qbo_tax_classes'] = get_option('ls_qbo_tax_classes');
+
+        if ('disabled' != $user_options['sync_type']) {
+
+            //if Discount option and Shipping option is not enabled
+            if (isset($user_options['qbo_info'])) {
+                if (isset($user_options['qbo_info']['allowDiscount']) && isset($user_options['qbo_info']['allowShipping'])) {
+                    if (!$user_options['qbo_info']['allowDiscount'] || !$user_options['qbo_info']['allowShipping']) {
+                        LS_QBO()->show_shipping_and_discount_guide($user_options);
+                        die();
+                    }
+                } else {
+                    LS_QBO()->show_shipping_and_discount_guide($user_options);
+                    die();
+                }
+            }
+
+
+            if ('sku' == $user_options['match_product_with']) {
+
+                $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
+                $emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();
+                $products_data = array_merge($duplicate_products, $emptyProductSkus);
+                if (count($products_data) > 0) {
+                    LS_QBO()->show_woo_duplicate_products($products_data, $emptyProductSkus, $duplicate_products);
+                    die();
+                }
+
+                $qbo_duplicate = get_option('ls_qbo_duplicate_products');
+                if (!empty($qbo_duplicate['products'])) {
+                    LS_QBO()->show_qbo_duplicate_products($qbo_duplicate['products']);
+                    die();
+                }
+
+            }
+
+            if (empty($user_options['qbo_tax_classes'])) {
+                LS_QBO()->show_configure_tax_error();
+                die();
+            }
+
+        }
+
+
+        $product_syncing->set_users_options($user_options);
+        if (empty($accounts_error)) {
+            $product_syncing->confirm_sync();
+        }
+
+
+        /**
+         * Display the Product Syncing Settings view and form
+         */
+        echo '<form method="post" id="ps_form_settings">';
+        $product_syncing->form_header();
+        $product_syncing->sync_type();
+
+        echo '<div id="ls-qbo-product-syncing-settings" ', $hide_on_disabled, '>';
+
+        $product_syncing->sync_bottons();
+        echo '<table class="form-table"><tbody>';
+
+        $product_syncing->match_product_with();
+        $product_syncing->title_or_name();
+        $product_syncing->description();
+        $product_syncing->price();
+
+
+        $product_syncing->quantity();
+
+        $product_syncing->income_account();
+        $product_syncing->categories();
+        $product_syncing->product_status();
+        $product_syncing->create_new();
+        $product_syncing->delete_view();
+
+        echo '</tbody></table>';
+
+        echo '</div>';
+        $product_syncing->save_changes_botton();
+
+        echo '</form>';
+
+        die();
     }
 
     public static function instance()
@@ -37,9 +165,214 @@ class LS_QBO_Product_Form
         return self::$_instance;
     }
 
+    /**
+     * @param $user_options array of product syncing option
+     */
+    public function update_product_syncing_settings($user_options)
+    {
+        $product_options = LS_QBO()->product_option();
+        if (!is_array($user_options)) {
+            parse_str($user_options, $user_options);
+        }
+
+        $accounts_error = '';
+
+        if (isset($user_options['product_sync_type'])) {
+            $product_options->update_sync_type($user_options['product_sync_type']);
+        }
+
+        if (isset($user_options['match_product_with'])) {
+            $product_options->update_match_product_with($user_options['match_product_with']);
+        }
+
+        if (isset($user_options['title_option'])) {
+            $product_options->update_title_or_name($user_options['title_option']);
+        } else {
+            $product_options->update_title_or_name('off');
+        }
+
+        if (isset($user_options['description'])) {
+            $product_options->update_description($user_options['description']);
+        } else {
+            $product_options->update_description('off');
+        }
+
+        if (isset($user_options['price'])) {
+            $product_options->update_price($user_options['price']);
+        } else {
+            $product_options->update_price('off');
+        }
+
+        if (isset($user_options['use_woo_tax'])) {
+            $product_options->update_use_woo_tax_option($user_options['use_woo_tax']);
+        } else {
+            $product_options->update_use_woo_tax_option('off');
+        }
+
+        if (isset($user_options['tax_option'])) {
+            $product_options->update_tax_option($user_options['tax_option']);
+        }
+
+        if (isset($user_options['tax_classes'])) {
+            $product_options->update_tax_class($user_options['tax_classes']);
+        }
+
+        if (isset($user_options['quantity_option'])) {
+            $product_options->update_quantity($user_options['quantity_option']);
+        } else {
+            $product_options->update_quantity('off');
+        }
+
+        if (isset($user_options['change_product_status_option'])) {
+            $product_options->update_change_product_status($user_options['change_product_status_option']);
+        } else {
+            $product_options->update_change_product_status('off');
+        }
+
+        if (isset($user_options['inventory_asset_account_select'])) {
+            $product_options->update_inventory_asset_account($user_options['inventory_asset_account_select']);
+        } elseif (!isset($user_options['inventory_asset_account_select'])) {
+            $accounts_error .= 'Please check your QuickBooks Inventory Asset Account to sync products properly.<br/>';
+        }
+
+        if (isset($user_options['inventory_expense_account_select'])) {
+            $product_options->update_expense_account($user_options['inventory_expense_account_select']);
+        }
+
+        if (isset($user_options['inventory_expense_account_select'])) {
+            $product_options->update_expense_account($user_options['inventory_expense_account_select']);
+        } elseif (!isset($user_options['inventory_expense_account_select'])) {
+            $accounts_error .= 'Please check your QuickBooks Expense Account to sync products properly.<br/>';
+        }
+
+        if (isset($user_options['income_account_select'])) {
+            $product_options->update_income_account($user_options['income_account_select']);
+        } elseif (!isset($user_options['income_account_select'])) {
+            $accounts_error .= 'Please check your QuickBooks Income Account to sync products properly.<br/>';
+        }
+
+        if (isset($user_options['category_option'])) {
+            $product_options->update_category($user_options['category_option']);
+        } else {
+            $product_options->update_category('off');
+        }
+
+        if (isset($user_options['product_status_option'])) {
+            $product_options->update_product_status($user_options['product_status_option']);
+        } else {
+            $product_options->update_product_status('off');
+        }
+
+        if (isset($user_options['create_new_product_option'])) {
+            $product_options->update_create_new($user_options['create_new_product_option']);
+        } else {
+            $product_options->update_create_new('off');
+        }
+
+        if (isset($user_options['delete_product_option'])) {
+            $product_options->update_delete($user_options['delete_product_option']);
+        } else {
+            $product_options->update_delete('off');
+        }
+
+        LS_QBO()->options()->set_accounts_error_message($accounts_error);
+        LS_QBO()->set_quantity_option_base_on_qboinfo();
+    }
+
+    public function accounts_error_message()
+    {
+
+        $accounts_error_message = LS_QBO()->options()->get_accounts_error_message();
+        if ($accounts_error_message) {
+            LS_Notice_Message_Builder::notice($accounts_error_message);
+        }
+
+
+    }
+
+    public function require_syncing_error_message()
+    {
+        $require_sync = LS_QBO()->options()->is_require_syncing();
+        if (!empty($require_sync)) {
+            LS_Notice_Message_Builder::notice($require_sync, 'error require-resync');
+        }
+    }
+
     public function set_users_options($option)
     {
         $this->options = $option;
+    }
+
+    public function confirm_sync()
+    {
+        $options = $this->options;
+
+        ?>
+        <div id="pop_up" class="ls-pop-ups"
+             style="display: <?php echo $options['sync_type'] != $this->sync_types[2] ? $options['pop_up_style'] : 'none'; ?>">
+            <div class="close-container">
+                <div class="ui-icon ui-icon-close close-reveal-modal btn-no"></div>
+            </div>
+
+            <div id="sync_progress_container" style="display: none;">
+
+                <center>
+                    <div id="syncing_loader">
+                        <p>Please do not close or refresh the browser while syncing is in progress.</p>
+                        <img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif">
+                    </div>
+                </center>
+
+                <center><h4 id="sync_message"></h4></center>
+                <center><h4 id="sync_progress"></h4></center>
+                <br/>
+
+            </div>
+
+            <div id="popup_message">
+                <center>
+                    <div>
+                        <h4 id="sync_pop_up_msg">Your changes will require a full re-sync of product data <br/> Do you
+                            want to re-sync now?</h4>
+                    </div>
+                </center>
+            </div>
+
+
+            <div id="pop_up_btn_container">
+                <?php
+                //Button to be shown on product syncing settings page to sync
+                if ($options['sync_type'] == $this->sync_types[0]) {
+                    ?>
+                    <div class="two_way_pop_button">
+                        <input type="button" class="product_from_qbo button" value="Product from QuickBooks">
+                        <input type="button" class="product_to_qbo button" value="Product to QuickBooks">
+                    </div>
+
+                    <div class="sync_all_products_from_qbo pop_button">
+                        <input type="button" class="product_from_qbo button btn-yes" value="Yes">
+                        <input type="button" class="button btn-no" name="no" value="No">
+                    </div>
+
+                    <div class="sync_all_products_to_qbo pop_button">
+                        <input type="button" class="product_to_qbo button btn-yes" value="Yes">
+                        <input type="button" class="button btn-no" name="no" value="No">
+                    </div>
+
+                    <?php
+                } else if ($options['sync_type'] == $this->sync_types[1]) {
+                    ?>
+                    <div class="pop_button">
+                        <input type="button" class="product_from_qbo button btn-yes" value="Yes">
+                        <input type="button" class="button btn-no" name="no" value="No">
+                    </div>
+                    <?php
+                }
+                ?>
+            </div>
+        </div>
+
+        <?php
     }
 
     public function form_header()
@@ -93,7 +426,6 @@ class LS_QBO_Product_Form
         <?php
     }
 
-
     /**
      * @param $sync_type
      */
@@ -114,89 +446,6 @@ class LS_QBO_Product_Form
                    value="Sync all products to QuickBooks"
                    class="button button-primary"
                    id="btn_sync_products_to_qbo">
-        </p>
-        <?php
-    }
-
-    public function confirm_sync()
-    {
-        $options = $this->options;
-
-        ?>
-        <div id="pop_up" class="ls-pop-ups"
-             style="display: <?php echo $options['sync_type'] != $this->sync_types[2] ? $options['pop_up_style'] : 'none'; ?>">
-            <div class="close-container">
-                <div class="ui-icon ui-icon-close close-reveal-modal btn-no"></div>
-            </div>
-
-            <div id="sync_progress_container" style="display: none;">
-
-                <center>
-                    <div id="syncing_loader">
-                        <p>Please do not close or refresh the browser while syncing is in progress.</p>
-                        <img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif">
-                    </div>
-                </center>
-
-                <center><h4 id="sync_message"></h4></center>
-                <center><h4 id="sync_progress"></h4></center>
-                <br/>
-
-            </div>
-
-            <div id="popup_message">
-                <center>
-                    <div>
-                        <h4 id="sync_pop_up_msg">Your changes will require a full re-sync of product data <br/> Do you
-                            want to re-sync now?</h4>
-                    </div>
-                </center>
-            </div>
-
-
-            <div id="pop_up_btn_container">
-                <?php
-
-                if ($options['sync_type'] == $this->sync_types[0]) {
-                    ?>
-                    <div class="two_way_pop_button">
-                        <input type="button" class="product_from_qbo button" value="Product from QuickBooks">
-                        <input type="button" class="product_to_qbo button" value="Product to QuickBooks">
-                    </div>
-
-                    <div class="sync_all_products_from_qbo pop_button">
-                        <input type="button" class="product_from_qbo button btn-yes" value="Yes">
-                        <input type="button" class="button btn-no" name="no" value="No">
-                    </div>
-
-                    <div class="sync_all_products_to_qbo pop_button">
-                        <input type="button" class="product_to_qbo button btn-yes" value="Yes">
-                        <input type="button" class="button btn-no" name="no" value="No">
-                    </div>
-
-                    <?php
-                } else if ($options['sync_type'] == $this->sync_types[1]) {
-                    ?>
-                    <div class="pop_button">
-                        <input type="button" class="product_from_qbo button btn-yes" value="Yes">
-                        <input type="button" class="button btn-no" name="no" value="No">
-                    </div>
-                    <?php
-                }
-                ?>
-            </div>
-        </div>
-
-        <?php
-    }
-
-    public function save_changes_botton()
-    {
-        ?>
-        <p style="text-align: center;">
-            <input class="button button-primary button-large save_changes"
-                   type="submit" name="save_product_sync_setting"
-                   value="Save Changes">
         </p>
         <?php
     }
@@ -375,7 +624,7 @@ class LS_QBO_Product_Form
 									To set the relevant tax rate for a product in WooCommerce
 								</p>
 								<div>
-									<table>
+									<table id="ls-tax-map-to-woo">
 										<thead>
 											<tr>
 												<th>QuickBooks Taxes</th><th>Woo-Commerce Tax Classes</th>
@@ -410,6 +659,57 @@ class LS_QBO_Product_Form
                                         ?>
 										</tbody>
 									</table>
+
+                                    <?php
+                                    if ($this->options['sync_type'] != $this->sync_types[0]) {
+                                        //$toQboTaxMapping = 'display:none;';
+                                    }
+                                    ?>
+                                    <table id="ls-tax-map-to-qbo"
+                                           style="<?php echo isset($toQboTaxMapping) ? $toQboTaxMapping : ''; ?>">
+										<thead>
+											<tr>
+												<th>Woo-Commerce Tax Classes</th><th>QuickBooks Taxes</th>
+											</tr>
+										</thead>
+                                        <tbody>
+                                        <?php
+                                        //Woocommerce to QuickBooks
+                                        foreach ($tax_classes as $tax_key => $tax_class) {
+                                            ?>
+                                            <tr>
+                                                    <td><?php echo $tax_class; ?></td>
+                                                    <td>
+                                                        <?php
+                                                        if (!empty($qbo_tax_rates)) {
+                                                            echo '<select name="tax_classes[', $tax_key, ']">';
+                                                            foreach ($qbo_tax_rates as $qbo_tax_rate) {
+                                                                $selected = '';
+                                                                if (!empty($selected_tax_classes)) {
+                                                                    if (!empty($selected_tax_classes[$tax_key])) {
+                                                                        if ($selected_tax_classes[$tax_key] == $qbo_tax_rate['id']) {
+                                                                            $selected = 'selected';
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                echo '<option ', $selected, ' value="', $qbo_tax_rate['id'], '">', $qbo_tax_rate['name'], '</option>';
+
+                                                            }
+                                                            echo '</select>';
+
+                                                        } elseif (empty($qbo_tax_rates)) {
+                                                            echo '<p class="color-red">No Tax from QuickBooks. Please configure your QuickBooks Tax to map Woocommerce and QuickBooks tax properly</p>';
+                                                        }
+                                                        ?>
+                                                    </td>
+                                                </tr>
+                                            <?php
+                                        }
+
+                                        ?>
+                                        </tbody>
+                                    </table>
 								</div>
 							</div>
 
@@ -424,7 +724,6 @@ class LS_QBO_Product_Form
     {
         $options = $this->options;
         $can_use_quantity_option = LS_QBO()->can_use_quantity_option();
-
 
         if ($can_use_quantity_option == false) {
             $style = ' class="bg-grayed color-red" ';
@@ -710,219 +1009,14 @@ class LS_QBO_Product_Form
         <?php
     }
 
-    /**
-     * Show Product syncing form and the users selected option
-     * Default option is also set properly in this method
-     */
-    public function product_syncing_settings()
+    public function save_changes_botton()
     {
-        $product_syncing = LS_QBO_Product_Form::instance();
-        $product_options = LS_QBO()->product_option();
-        $qbo_api = LS_QBO()->api();
-
-        $show_hide_pop_up = 'none';
-        $user_options = null;
-
-
-        /**
-         * Detect Save Changes was submitted
-         */
-        if (isset($_POST['form_items'])) {
-            $product_syncing->update_product_syncing_settings($_POST['form_items']);
-            $show_hide_pop_up = 'block';
-        }
-
-        $sync_type = $product_options->sync_type();
-        $sync_types = $product_options->get_all_sync_type();
-
-        $hide_on_disabled = ($sync_type == $sync_types[2]) ? 'style="display: none;"' : '';
-
-        $user_options = $product_options->get_current_product_syncing_settings();
-        $user_options['pop_up_style'] = $show_hide_pop_up;
-
-        $user_options['qbo_info'] = get_option('ls_qbo_info');
-        $user_options['assets_account'] = get_option('ls_asset_accounts');
-        $user_options['expense_account'] = get_option('ls_expense_accounts');
-        $user_options['income_accounts'] = get_option('ls_income_accounts');
-        $user_options['qbo_tax_classes'] = get_option('ls_qbo_tax_classes');
-
-        if ('disabled' != $user_options['sync_type']) {
-
-            //if Discount option and Shipping option is not enabled
-            if (isset($user_options['qbo_info'])) {
-                if (isset($user_options['qbo_info']['allowDiscount']) && isset($user_options['qbo_info']['allowShipping'])) {
-                    if (!$user_options['qbo_info']['allowDiscount'] || !$user_options['qbo_info']['allowShipping']) {
-                        LS_QBO()->show_shipping_and_discount_guide($user_options);
-                        die();
-                    }
-                } else {
-                    LS_QBO()->show_shipping_and_discount_guide($user_options);
-                    die();
-                }
-            }
-
-
-            if ('sku' == $user_options['match_product_with']) {
-
-                $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
-                $emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();
-                $products_data = array_merge($duplicate_products, $emptyProductSkus);
-                if (count($products_data) > 0) {
-                    LS_QBO()->show_woo_duplicate_products($products_data, $emptyProductSkus, $duplicate_products);
-                    die();
-                }
-
-                $qbo_duplicate = get_option('ls_qbo_duplicate_products');
-                if (!empty($qbo_duplicate['products'])) {
-                    LS_QBO()->show_qbo_duplicate_products($qbo_duplicate['products']);
-                    die();
-                }
-            }
-
-        }
-
-
-        $product_syncing->set_users_options($user_options);
-        $product_syncing->confirm_sync();
-
-        /**
-         * Display the Product Syncing Settings view and form
-         */
-        echo '<form method="post" id="ps_form_settings">';
-        $product_syncing->form_header();
-        $product_syncing->sync_type();
-
-        echo '<div id="ls-qbo-product-syncing-settings" ', $hide_on_disabled, '>';
-
-        $product_syncing->sync_bottons();
-        echo '<table class="form-table"><tbody>';
-
-        $product_syncing->match_product_with();
-        $product_syncing->title_or_name();
-        $product_syncing->description();
-        $product_syncing->price();
-
-
-        $product_syncing->quantity();
-
-        $product_syncing->income_account();
-        $product_syncing->categories();
-        $product_syncing->product_status();
-        $product_syncing->create_new();
-        $product_syncing->delete_view();
-
-        echo '</tbody></table>';
-
-        echo '</div>';
-        $product_syncing->save_changes_botton();
-
-        echo '</form>';
-
-        die();
-    }
-
-    /**
-     * @param $user_options array of product syncing option
-     */
-    public function update_product_syncing_settings($user_options)
-    {
-        $product_options = LS_QBO()->product_option();
-        if (!is_array($user_options)) {
-            parse_str($user_options, $user_options);
-        }
-
-        if (isset($user_options['product_sync_type'])) {
-            $product_options->update_sync_type($user_options['product_sync_type']);
-        }
-
-        if (isset($user_options['match_product_with'])) {
-            $product_options->update_match_product_with($user_options['match_product_with']);
-        }
-
-        if (isset($user_options['title_option'])) {
-            $product_options->update_title_or_name($user_options['title_option']);
-        } else {
-            $product_options->update_title_or_name('off');
-        }
-
-        if (isset($user_options['description'])) {
-            $product_options->update_description($user_options['description']);
-        } else {
-            $product_options->update_description('off');
-        }
-
-        if (isset($user_options['price'])) {
-            $product_options->update_price($user_options['price']);
-        } else {
-            $product_options->update_price('off');
-        }
-
-        if (isset($user_options['use_woo_tax'])) {
-            $product_options->update_use_woo_tax_option($user_options['use_woo_tax']);
-        } else {
-            $product_options->update_use_woo_tax_option('off');
-        }
-
-        if (isset($user_options['tax_option'])) {
-            $product_options->update_tax_option($user_options['tax_option']);
-        }
-
-        if (isset($user_options['tax_classes'])) {
-            $product_options->update_tax_class($user_options['tax_classes']);
-        }
-
-        if (isset($user_options['quantity_option'])) {
-            $product_options->update_quantity($user_options['quantity_option']);
-        } else {
-            $product_options->update_quantity('off');
-        }
-
-        if (isset($user_options['change_product_status_option'])) {
-            $product_options->update_change_product_status($user_options['change_product_status_option']);
-        } else {
-            $product_options->update_change_product_status('off');
-        }
-
-        if (isset($user_options['inventory_asset_account_select'])) {
-            $product_options->update_inventory_asset_account($user_options['inventory_asset_account_select']);
-        }
-
-        if (isset($user_options['inventory_expense_account_select'])) {
-            $product_options->update_expense_account($user_options['inventory_expense_account_select']);
-        }
-
-        if (isset($user_options['inventory_expense_account_select'])) {
-            $product_options->update_expense_account($user_options['inventory_expense_account_select']);
-        }
-
-        if (isset($user_options['income_account_select'])) {
-            $product_options->update_income_account($user_options['income_account_select']);
-        }
-
-        if (isset($user_options['category_option'])) {
-            $product_options->update_category($user_options['category_option']);
-        } else {
-            $product_options->update_category('off');
-        }
-
-        if (isset($user_options['product_status_option'])) {
-            $product_options->update_product_status($user_options['product_status_option']);
-        } else {
-            $product_options->update_product_status('off');
-        }
-
-        if (isset($user_options['create_new_product_option'])) {
-            $product_options->update_create_new($user_options['create_new_product_option']);
-        } else {
-            $product_options->update_create_new('off');
-        }
-
-        if (isset($user_options['delete_product_option'])) {
-            $product_options->update_delete($user_options['delete_product_option']);
-        } else {
-            $product_options->update_delete('off');
-        }
-
-        LS_QBO()->set_quantity_option_base_on_qboinfo();
+        ?>
+        <p style="text-align: center;">
+            <input class="button button-primary button-large save_changes"
+                   type="submit" name="save_product_sync_setting"
+                   value="Save Changes">
+        </p>
+        <?php
     }
 }

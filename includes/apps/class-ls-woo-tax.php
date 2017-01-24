@@ -164,4 +164,45 @@ class LS_Woo_Tax{
         return self::get_tax_rates('zero-rate');
     }
 
+    public static function getQuickBooksTaxInfoByWooTaxKey($wooTaxId)
+    {
+        if(empty($wooTaxId)){
+            return 'empty_woo_tax_id';
+        }
+
+        $productOptions = LS_QBO()->product_option();
+        $taxClasses = $productOptions->tax_class();
+
+        if(!empty($taxClasses[$wooTaxId])){
+            $qboTaxId = $taxClasses[$wooTaxId];
+        }
+
+        if(!empty($qboTaxId)){
+            if('no_tax' == $qboTaxId){
+                $qboTaxInfo['id'] = null;
+                $qboTaxInfo['name'] = null;
+                $qboTaxInfo['rateValue'] = null;
+                return $qboTaxInfo;
+            }
+
+            $qboTaxClasses = self::getQuickBooksTaxClasses();
+            foreach ($qboTaxClasses as $qboTaxInfo){
+                if($qboTaxId == $qboTaxInfo['id']){
+                    return $qboTaxInfo;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     *
+     * @return mixed|void
+     */
+    public static function getQuickBooksTaxClasses()
+    {
+        return get_option('ls_qbo_tax_classes');
+    }
+
 }

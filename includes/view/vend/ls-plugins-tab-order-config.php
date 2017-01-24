@@ -4,7 +4,7 @@
 
 <?php
 
-    $LAIDKey = linksync::get_current_laid();
+    $LAIDKey = LS_ApiController::get_current_laid();
 
     if (!empty($LAIDKey)) {
         $ls_connected_to    = get_option('linksync_connectedto');

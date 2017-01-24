@@ -4,7 +4,7 @@
 
 <?php
 
-    $LAIDKey = linksync::get_current_laid();
+    $LAIDKey = LS_ApiController::get_current_laid();
     $testMode = get_option('linksync_test');
 
 

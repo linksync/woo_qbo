@@ -38,6 +38,175 @@
         });
 
         /**
+         * Click event for syncing product comming from qbo to woocommerce inside configuration page
+         */
+        ls_wrapper.on('click', '.configuration_product_from_qbo', function(){
+            configuration_product_from_qbo_to_woo();
+            done_required_sync();
+        });
+        /**
+         * Click event for syncing prodcut from woocommerce to qbo inside configuration page
+         */
+        ls_wrapper.on('click', '.configuration_product_to_qbo', function(){
+            product_from_woo_to_qbo();
+            done_required_sync();
+        });
+
+        function done_required_sync() {
+            var data = {
+                action : 'qbo_done_syncing_required'
+            };
+            post_data(data, function (data) {
+                $('.require-resync').hide();
+            });
+        }
+        
+        function configuration_product_from_qbo_to_woo() {
+            ajax_flag = 0;
+
+            var btn_no                  =   $('.btn-no');
+            var popup_message           =   $('#popup_message');
+            var sync_progress_cont      =   $('#sync_progress_container');
+            var popup_btn_con           =   $('#pop_up_btn_container');
+            var sync_message            =   $('#sync_message');
+            var sync_progress           =   $('#sync_progress');
+
+            btn_no.hide();
+            popup_message.hide();
+            sync_progress_cont.fadeIn();
+            popup_btn_con.hide();
+            sync_message.html("Getting products from QuickBooks Online.");
+
+            //check if page is undefined then we set it to one
+            if(typeof page == 'undefined'){
+                page = 1;
+            }else if( page <= 0){
+                //Make sure we always start to page 1
+                page = 1;
+            }
+            var product_number = 0;
+
+            get_product_by_page(page, function(res){
+                var product_count = res.products.length;
+
+                if(product_count > 0){
+
+                    for( var i = 0; i < product_count; i++){
+
+
+                        product = res.products[i];
+                        if( product.deleted_at == null ){
+                            product_number = i+1;
+                        }
+
+
+                        if(res.pagination.page > 1){
+                            product_number += PER_PAGE;
+                        }
+
+                        var p_data = {
+                            action              :   'import_to_woo',
+                            page                :   res.pagination.page,
+                            product_total_count :   res.pagination.results,
+                            product             :   product,
+                            product_number      :   product_number,
+                            deleted_product     :   res.pagination.deleted_product
+                        };
+
+                        post_data(p_data,function(p_res){
+                            sync_message.html("Importing Products to Woocomerce.");
+                            sync_progress.html(p_res);
+                            console.log(p_res);
+                        });
+                    }
+
+                }
+
+
+
+                if(res.pagination.page <= res.pagination.pages){
+
+                    page = parseInt(res.pagination.page) + 1;
+
+                    if(page <= res.pagination.pages){
+                        product_from_qbo_to_woo(page);
+                    }
+
+                }
+
+            });
+
+
+        }
+
+        /**
+         * Get products by page, each page contains a maximum of 50 products
+         * @param page
+         * @param callback
+         */
+        function get_product_by_page( page, callback ){
+            var data = {
+                action: 'qbo_get_products',
+                page: page
+            };
+
+            post_data(data, function(response){
+
+                if(!$.isEmptyObject(response)){
+
+                    if(!$.isEmptyObject(response.products)){
+                        callback(response);
+                    }
+                }
+            });
+
+        }
+
+
+        function product_from_woo_to_qbo(){
+            console.log('woo products to qbo');
+            ajax_flag = 0;
+            var btn_no                  =   $('.btn-no');
+            var popup_message           =   $('#popup_message');
+            var sync_progress_cont      =   $('#sync_progress_container');
+            var popup_btn_con           =   $('#pop_up_btn_container');
+            var sync_message            =   $('#sync_message');
+            var sync_progress           =   $('#sync_progress');
+
+            btn_no.hide();
+            popup_message.hide();
+            sync_progress_cont.fadeIn();
+            popup_btn_con.hide();
+            sync_message.html("Starting...").fadeIn().delay(20000).fadeIn().html("Exporting Product to QuickBooks");
+            sync_progress.html("");
+
+
+            post_data({action: 'woo_get_products'}, function(woo_products){
+                if(!$.isEmptyObject(woo_products)){
+                    var product_total_count = woo_products.length;
+
+                    if(product_total_count > 0){
+                        for( var i = 0; i < product_total_count; i++){
+
+                            product_number = i+1;
+                            var data = {
+                                action              :   'import_to_qbo',
+                                p_id                :   woo_products[i].ID,
+                                product_number      :   product_number,
+                                total_count         :   product_total_count,
+                            };
+                            post_data(data, function(response){
+                                console.log(response);
+                                sync_progress.html(response);
+                            });
+                        }
+                    }
+                }
+            });
+        }
+
+
+        /**
          * @param page Number
          */
         function product_from_qbo_to_woo( page ){

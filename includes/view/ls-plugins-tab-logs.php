@@ -1,5 +1,8 @@
 <?php if ( ! defined( 'ABSPATH' ) ) exit('Access is Denied');
 
+$product_syncing_form = LS_QBO_Product_Form::instance();
+$product_syncing_form->accounts_error_message();
+$product_syncing_form->require_syncing_error_message();
 
  if (isset($_POST['clearlog'])) {
     $empty = LSC_Log::instance()->truncate_table();
