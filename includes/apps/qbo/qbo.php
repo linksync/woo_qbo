@@ -29,7 +29,29 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
         public function load_hooks()
         {
+            $mainPluginFile = LS_PLUGIN_DIR . 'linksync.php';
+            register_activation_hook($mainPluginFile, array($this, 'qbo_install'));
+            add_action('plugins_loaded', array($this, 'qbo_plugin_loaded'));
             $this->load_ajax_hooks();
+        }
+
+        /**
+         * Run on plugin activation
+         */
+        public function qbo_install()
+        {
+            $accounts = new LS_QBO_Account();
+            $accounts->createTable();
+        }
+
+        /**
+         * Fires once if this plugin is active and is loaded
+         */
+        public function qbo_plugin_loaded()
+        {
+            $accounts = new LS_QBO_Account();
+            $accounts->tableUpgrade();
+
         }
 
         public function load_ajax_hooks()
@@ -126,7 +148,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function get_expense_account_by($key, $value)
         {
             if (!empty($account_name)) {
-                $expense_accounts = get_option('ls_expense_accounts');
+                $expense_accounts = LS_QBO()->options()->getExpenseAccounts();
                 if (!empty($expense_accounts)) {
                     return LS_QBO()->search_accounts($key, $value, $expense_accounts);
                 }
@@ -142,7 +164,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function get_inventory_asset_account_by($key, $value)
         {
             if (!empty($account_name)) {
-                $inventory_asset_accounts = get_option('ls_asset_accounts');
+                $inventory_asset_accounts = LS_QBO()->options()->getAssetAccounts();
                 if (!empty($inventory_asset_accounts)) {
                     return LS_QBO()->search_accounts($key, $value, $inventory_asset_accounts);
                 }
@@ -158,7 +180,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function get_income_account_by($key, $value)
         {
             if (!empty($account_name)) {
-                $income_accounts = get_option('ls_income_accounts');
+                $income_accounts = LS_QBO()->options()->getIncomeAccounts();
                 if (!empty($income_accounts)) {
                     return LS_QBO()->search_accounts($key, $value, $income_accounts);
                 }
@@ -195,12 +217,12 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             set_time_limit(0);
             $qbo_info = $qbo_api->get_qbo_info();
 
-            update_option('ls_qbo_info', $qbo_info);
-            update_option('ls_asset_accounts', $qbo_api->get_assets_accounts());
-            update_option('ls_expense_accounts', $qbo_api->get_expense_accounts());
-            update_option('ls_income_accounts', $qbo_api->get_income_accounts());
-            update_option('ls_qbo_tax_classes', $qbo_api->get_all_tax_rate());
-            update_option('ls_qbo_duplicate_products', $qbo_api->product()->get_duplicate_products());
+            LS_QBO()->options()->updateQuickBooksInfo($qbo_info);
+            LS_QBO()->options()->updateAssetAccounts($qbo_api->get_assets_accounts());
+            LS_QBO()->options()->updateExpeseAccounts($qbo_api->get_expense_accounts());
+            LS_QBO()->options()->updateIncomeAccounts($qbo_api->get_income_accounts());
+            LS_QBO()->options()->updateQuickBooksTaxClasses($qbo_api->get_all_tax_rate());
+            LS_QBO()->options()->updateQuickBooksDuplicateProducts($qbo_api->product()->get_duplicate_products());
 
             LS_QBO()->set_quantity_option_base_on_qboinfo($qbo_info);
 
@@ -214,14 +236,14 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             set_time_limit(0);
             $qbo_info = $qbo_api->get_qbo_info();
             $qbo_classes = $qbo_api->get_all_active_clases();
+            $deposit_accounts = $qbo_api->getDepositAccounts();
 
-            update_option('ls_asset_accounts', $qbo_api->get_assets_accounts());
-            update_option('ls_location_list', $qbo_api->get_all_active_location());
-            update_option('ls_qbo_classes', $qbo_classes);
-            update_option('ls_qbo_tax_classes', $qbo_api->get_all_tax_rate());
-            update_option('ls_qbo_payment_methods', $qbo_api->get_all_payment_methods());
-            update_option('ls_qbo_info', $qbo_info);
-
+            LS_QBO()->options()->update_deposit_accounts($deposit_accounts);
+            LS_QBO()->options()->updateQuickBooksLocationList($qbo_api->get_all_active_location());
+            LS_QBO()->options()->updateQuickBooksClasses($qbo_classes);
+            LS_QBO()->options()->updateQuickBooksTaxClasses($qbo_api->get_all_tax_rate());
+            LS_QBO()->options()->updateQuickBooksPaymentMethods($qbo_api->get_all_payment_methods());
+            LS_QBO()->options()->updateQuickBooksInfo($qbo_info);
             LS_QBO()->set_quantity_option_base_on_qboinfo($qbo_info);
 
             die();
@@ -233,7 +255,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
          */
         public function get_subscription()
         {
-            $qbo_info = get_option('ls_qbo_info');
+            $qbo_info = LS_QBO()->options()->getQuickBooksInfo();
             if (!empty($qbo_info) && isset($qbo_info['version'])) {
                 return $qbo_info['version'];
             }
@@ -270,7 +292,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         {
 
             if ($qbo_info == null) {
-                $qbo_info = get_option('ls_qbo_info');
+                $qbo_info = LS_QBO()->options()->getQuickBooksInfo();
             }
 
             if (isset($qbo_info['version'])) {
@@ -297,7 +319,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             $bool = true;
 
             if ($qbo_info == null) {
-                $qbo_info = get_option('ls_qbo_info');
+                $qbo_info = LS_QBO()->options()->getQuickBooksInfo();
             }
 
             if (isset($qbo_info['version'])) {
@@ -400,6 +422,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 include_once LS_INC_DIR . 'apps/qbo/class-ls-qbo-ajax.php';
             }
 
+            include_once LS_INC_DIR . 'apps/qbo/class-ls-qbo-account.php';
 
         }
 
@@ -596,8 +619,13 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     echo 'and turn on <b>Shipping</b> option to use linksync.';
                 }
                 echo '</p>';
-            } else if ($user_options['qbo_info']['errorCode']) {
+            } else if (isset($user_options['qbo_info']['errorCode'])) {
                 echo '<p class="color-red"><b> Error ', $user_options['qbo_info']['errorCode'], ': ', $user_options['qbo_info']['userMessage'], '</b></p>';
+            }
+
+
+            if(empty($user_options['qbo_info'])){
+                echo '<p class="color-red"><b>QuickBooks Information associated with the api key being used is empty</b></p>';
             }
 
         }

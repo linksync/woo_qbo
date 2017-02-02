@@ -210,15 +210,14 @@ class LS_QBO_Order_Form
                             <b>Deposit Account</b>
 
                             <?php
-                            if (!empty($option['asset_accounts'])) {
+                            if (!empty($option['deposit_accounts'])) {
                                 $selected = $option['post_quikbooks_as']['deposit_account'];
-
                                 echo '<select name="deposit_account">';
-                                foreach ($option['asset_accounts'] as $assets_account) {
-                                    $selected = ($selected == $assets_account['fullyQualifiedName']) ? 'selected' : '';
+                                foreach ($option['deposit_accounts'] as $assets_account) {
+                                    $selectedDepositAccount = ($selected == $assets_account['id']) ? 'selected' : '';
                                     ?>
-                                    <option <?php echo $selected; ?>
-                                            value="<?php echo $assets_account['fullyQualifiedName']; ?>">
+                                    <option <?php echo $selectedDepositAccount; ?>
+                                            value="<?php echo $assets_account['id']; ?>">
                                         <?php echo $assets_account['fullyQualifiedName']; ?>
                                     </option>
                                     <?php
@@ -603,14 +602,14 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
         $users_order_option = $order_options->get_current_order_syncing_settings();
         $hide_on_disabled = ($users_order_option['sync_type'] == $order_options->get_all_sync_type()[1]) ? 'style="display: none;"' : '';
 
-        $users_order_option['asset_accounts'] = get_option('ls_asset_accounts');
-        $users_order_option['location_list'] = get_option('ls_location_list');
-        $users_order_option['qbo_classes'] = get_option('ls_qbo_classes');
-        $users_order_option['qbo_payment_methods'] = get_option('ls_qbo_payment_methods');
-        $users_order_option['qbo_tax_classes'] = get_option('ls_qbo_tax_classes');
+        $users_order_option['deposit_accounts'] = LS_QBO()->options()->get_deposit_accounts();
+        $users_order_option['location_list'] = LS_QBO()->options()->getQuickBooksLocationList();
+        $users_order_option['qbo_classes'] = LS_QBO()->options()->getQuickBooksClasses();
+        $users_order_option['qbo_payment_methods'] = LS_QBO()->options()->getQuickBooksPaymentMethods();//get_option('');
+        $users_order_option['qbo_tax_classes'] = LS_QBO()->options()->getQuickBooksTaxClasses();
 
         //if Discount option and Shipping option is not enabled
-        $qbo_info['qbo_info'] = get_option('ls_qbo_info');
+        $qbo_info['qbo_info'] = LS_QBO()->options()->getQuickBooksInfo();
 
 
         $qbo_allow_discount = isset($qbo_info['qbo_info']['allowDiscount']) ? $qbo_info['qbo_info']['allowDiscount'] : false;

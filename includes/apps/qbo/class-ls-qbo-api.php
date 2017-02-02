@@ -55,16 +55,23 @@ class LS_QBO_Api{
 		return $this->api->get('qbo/taxcode');
 	}
 
-	/**
-	 * QuickBooks Online Chart of Accounts
-	 * Returns all active Accounts for the current retailer.
-	 *
-	 * @param $classification
-	 * @return array
-	 */
-	public function get_all_active_accounts( $classification ){
-		return $this->api->get('qbo/account?classification='.$classification);
-	}
+    /**
+     * QuickBooks Online Chart of Accounts
+     * Returns all active Accounts for the current retailer.
+     *
+     * @param $classification
+     * @return array
+     */
+    public function getAccountsByClassification($classification)
+    {
+        return $this->api->get('qbo/account?classification=' . $classification);
+    }
+
+    public function getDepositAccounts()
+    {
+        $depositAccounts = $this->getAccountsByClassification('Asset');
+        return isset($depositAccounts['accounts']) ? $depositAccounts['accounts'] : null;
+    }
 
 	/**
 	 * QuickBooks Online Chart of Accounts

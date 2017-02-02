@@ -178,6 +178,27 @@ class LS_Woo_Product
         }
     }
 
+    public static function direct_db_post_meta_delete($meta_id)
+    {
+        global $wpdb;
+        $result = $wpdb->delete($wpdb->postmeta, array('meta_id' => $meta_id));
+
+        return $result;
+    }
+
+    public static function get_post_meta($product_id, $meta_key, $meta_value = null)
+    {
+        global $wpdb;
+
+        $preparedQuery = $wpdb->prepare("SELECT * FROM $wpdb->postmeta WHERE post_id = %s AND meta_key = %s ", $product_id, $meta_key);
+        if(null === $preparedQuery){
+            $preparedQuery = $wpdb->prepare(" AND meta_value = %s", $meta_value);
+        }
+        $result = $wpdb->get_results($preparedQuery, ARRAY_A);
+
+        return $result;
+    }
+
     public static function get_woo_duplicate_sku()
     {
         global $wpdb;
@@ -201,11 +222,30 @@ class LS_Woo_Product
 					 ) AS s_wpmeta
 						ON wpmeta.meta_value = s_wpmeta.meta_value
 				INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
-				WHERE wpmeta.meta_key = '_sku' AND wpmeta.meta_value != '' AND wposts.post_type IN('product','product_variation')
+				WHERE wpmeta.meta_key = '_sku' AND wpmeta.meta_value != '' AND wposts.post_type IN('product','product_variation') 
 				ORDER BY wpmeta.meta_value ASC
 			", ARRAY_A);
 
-        return $result;
+        $real_sku_duplicate = array();
+        if(!empty($result)){
+            foreach ($result as $duplicateSku) {
+                $product_metas = LS_Woo_Product::get_post_meta($duplicateSku['ID'], $duplicateSku['meta_key'], $duplicateSku['meta_value']);
+                $count = count($product_metas);
+
+                if($count >= 2){
+                    if(isset($product_metas[0]['meta_id'])){
+                        unset($product_metas[0]);
+                    }
+                    foreach($product_metas as $product_meta){
+                        self::direct_db_post_meta_delete($product_meta['meta_id']);
+                    }
+                } else {
+                    $real_sku_duplicate[] = $duplicateSku;
+                }
+            }
+        }
+
+        return $real_sku_duplicate;
     }
 
     /**

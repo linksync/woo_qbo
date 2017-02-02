@@ -65,11 +65,11 @@ class LS_QBO_Product_Form
         }
         $user_options['pop_up_style'] = $show_hide_pop_up;
 
-        $user_options['qbo_info'] = get_option('ls_qbo_info');
-        $user_options['assets_account'] = get_option('ls_asset_accounts');
-        $user_options['expense_account'] = get_option('ls_expense_accounts');
-        $user_options['income_accounts'] = get_option('ls_income_accounts');
-        $user_options['qbo_tax_classes'] = get_option('ls_qbo_tax_classes');
+        $user_options['qbo_info'] = LS_QBO()->options()->getQuickBooksInfo();
+        $user_options['assets_account'] = LS_QBO()->options()->getAssetAccounts();
+        $user_options['expense_account'] = LS_QBO()->options()->getExpenseAccounts();
+        $user_options['income_accounts'] = LS_QBO()->options()->getIncomeAccounts();
+        $user_options['qbo_tax_classes'] = LS_QBO()->options()->getQuickBooksTaxClasses();
 
         if ('disabled' != $user_options['sync_type']) {
 
@@ -97,7 +97,7 @@ class LS_QBO_Product_Form
                     die();
                 }
 
-                $qbo_duplicate = get_option('ls_qbo_duplicate_products');
+                $qbo_duplicate = LS_QBO()->options()->getQuickBooksDuplicateProducts();
                 if (!empty($qbo_duplicate['products'])) {
                     LS_QBO()->show_qbo_duplicate_products($qbo_duplicate['products']);
                     die();
@@ -564,7 +564,7 @@ class LS_QBO_Product_Form
                      id="price_options_container" <?php echo ($option['price'] != 'on') ? 'style="display:none;"' : '' ?>>
 						<span class="ps_price_sub_options">
 							<?php
-                            $woo_calc_taxes = get_option('woocommerce_calc_taxes');
+                            $woo_calc_taxes = LS_QBO()->options()->woocommerce_calc_taxes();
                             if ('yes' == $woo_calc_taxes) {
                                 ?>
                                 <label>

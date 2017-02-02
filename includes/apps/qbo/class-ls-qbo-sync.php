@@ -52,6 +52,43 @@ class LS_QBO_Sync
 
         add_action('wp_ajax_product_meta', array('LS_QBO_Sync', 'product_meta'));
         add_action('wp_ajax_nopriv_product_meta', array('LS_QBO_Sync', 'product_meta'));
+
+
+        add_action('wp_ajax_ls_product_options', array('LS_QBO_Sync', 'product_options'));
+        add_action('wp_ajax_ls_order_options', array('LS_QBO_Sync', 'order_options'));
+
+        add_action('wp_ajax_qbo_accounts_webhook', array('LS_QBO_Sync', 'updateQuickBooksAccounts'));
+        add_action('wp_ajax_nopriv_qbo_accounts_webhook', array('LS_QBO_Sync', 'updateQuickBooksAccounts'));
+    }
+
+    public static function updateQuickBooksAccounts()
+    {
+        if(isset($_REQUEST['update']) && true == $_REQUEST['update']){
+            set_time_limit(0);
+            $qbo_api = LS_QBO()->api();
+
+            $accounts = $qbo_api->get_accounts();
+            $account = new LS_QBO_Account();
+            if(!empty($accounts['accounts'])){
+                $account->batchInsertUpdate($accounts['accounts']);
+            }
+
+            wp_send_json($account->getAll());
+        }
+
+        wp_send_json(array('error' => 'QuickBooks Account update to Woocommerce was not triggered'));
+    }
+
+    public static function product_options()
+    {
+        wp_send_json(LS_QBO()->product_option()->get_current_product_syncing_settings());
+        die();
+    }
+
+    public static function order_options()
+    {
+        wp_send_json(LS_QBO()->order_option()->get_current_order_syncing_settings());
+        die();
     }
 
     public static function product_meta()
@@ -116,6 +153,11 @@ class LS_QBO_Sync
             if (empty($sku)) {
                 $sku = 'sku_' . $product_id;
                 $product_meta->update_sku($sku);
+            }
+
+            //Update product tax class to zero-rate if tax status is none
+            if (!empty($_POST['_tax_status']) && 'none' == $_POST['_tax_status']) {
+                $product_meta->update_tax_class('zero-rate');
             }
 
             if (true == $has_children) {
@@ -404,11 +446,12 @@ class LS_QBO_Sync
                 if(empty($taxId)){
                     $wooTaxClass = ('' == $product_meta->get_tax_class()) ? 'standard' : $product_meta->get_tax_class();
                     $qboTaxClassInfo = LS_Woo_Tax::getQuickBooksTaxInfoByWooTaxKey($wooTaxClass);
+                    error_log(json_encode($qboTaxClassInfo));
                     if (!empty($qboTaxClassInfo['id'])) {
                         $taxId = $qboTaxClassInfo['id'];
                         $taxName = $qboTaxClassInfo['name'];
-                        $taxRate = $qboTaxClassInfo['rateValue'];
-                        $taxValue = $qboTaxClassInfo['rateValue'];
+                        $taxRate = isset($qboTaxClassInfo['rateValue']) ? $qboTaxClassInfo['rateValue'] : null;
+                        $taxValue = isset($qboTaxClassInfo['rateValue']) ? $qboTaxClassInfo['rateValue'] : null;
                     }
                 }
 
@@ -592,6 +635,8 @@ class LS_QBO_Sync
                         'transactionNumber' => $order_transaction_id
                     );
                 }
+
+                $payment['deposit_accountref'] = $order_option->deposit_account();
                 $json_order->set_payment($payment);
             }
 

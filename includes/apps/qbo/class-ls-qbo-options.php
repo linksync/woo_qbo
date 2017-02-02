@@ -86,6 +86,106 @@ class LS_QBO_Options
         return self::instance()->last_update('order_last_update', $utc_date_time);
     }
 
+    public function get_deposit_accounts()
+    {
+        return self::instance()->get_option('deposit_accounts');
+    }
+
+    public function update_deposit_accounts($deposit_accounts)
+    {
+        return self::instance()->update_option('deposit_accounts', $deposit_accounts);
+    }
+
+    public function getQuickBooksInfo()
+    {
+        return self::instance()->get_option('ls_qbo_info');
+    }
+
+    public function updateQuickBooksInfo($quickBooksInfo)
+    {
+        return self::instance()->update_option('ls_qbo_info', $quickBooksInfo);
+    }
+
+    public function updateAssetAccounts($assetsAccounts)
+    {
+        return self::instance()->update_option('ls_asset_accounts', $assetsAccounts);
+    }
+
+    public function getAssetAccounts()
+    {
+        return self::instance()->get_option('ls_asset_accounts');
+    }
+
+    public function getExpenseAccounts()
+    {
+        return self::instance()->get_option('ls_expense_accounts');
+    }
+
+    public function updateExpeseAccounts($expneseAccounts)
+    {
+        return self::instance()->update_option('ls_expense_accounts', $expneseAccounts);
+    }
+
+    public function getIncomeAccounts()
+    {
+        return self::instance()->get_option('ls_income_accounts');
+    }
+
+    public function updateIncomeAccounts($incomeAccounts)
+    {
+        return self::instance()->update_option('ls_income_accounts', $incomeAccounts);
+    }
+
+    public function getQuickBooksTaxClasses()
+    {
+        return self::instance()->get_option('ls_qbo_tax_classes');
+    }
+
+    public function updateQuickBooksTaxClasses($quickBooksTaxClasses)
+    {
+        return self::instance()->update_option('ls_qbo_tax_classes', $quickBooksTaxClasses);
+    }
+
+    public function getQuickBooksDuplicateProducts()
+    {
+        return self::instance()->get_option('ls_qbo_duplicate_products');
+    }
+
+    public function updateQuickBooksDuplicateProducts($duplicateProducts)
+    {
+        return self::instance()->update_option('ls_qbo_duplicate_products', $duplicateProducts);
+    }
+
+    public function getQuickBooksLocationList()
+    {
+        return self::instance()->get_option('ls_location_list');
+    }
+
+    public function updateQuickBooksLocationList($locationList)
+    {
+        return self::instance()->update_option('ls_location_list', $locationList);
+    }
+
+    public function getQuickBooksClasses()
+    {
+        return self::instance()->get_option('ls_qbo_classes');
+    }
+
+    public function updateQuickBooksClasses($quickBooksClasses)
+    {
+        return self::instance()->update_option('ls_qbo_classes', $quickBooksClasses);
+    }
+
+    public function getQuickBooksPaymentMethods()
+    {
+        return self::instance()->get_option('ls_qbo_payment_methods');
+    }
+
+    public function updateQuickBooksPaymentMethods($paymentMethods)
+    {
+        return self::instance()->update_option('ls_qbo_payment_methods', $paymentMethods);
+    }
+
     /**
      * Save last update_at value to the database plus one second
      * @param $type

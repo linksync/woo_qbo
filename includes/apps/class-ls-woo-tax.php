@@ -31,14 +31,10 @@ class LS_Woo_Tax{
         if (!empty($orderTax)) {
             foreach ($orderTax as $tax_label) {
                 $tax_line_item = new LS_Woo_Order_Line_Item($tax_label);
-
                 if(empty($tax_line_item->lineItem['shipping_tax_amount'])){
                     return '';//No tax was set up for shipping
                 }
-                $tax_info = LS_Woo_Tax::get_tax_rate_by_name_and_class(
-                    $tax_line_item->get_tax_name(),
-                    $tax_line_item->itemMeta
-                );
+                $tax_info = LS_Woo_Tax::get_tax_rate_by_rate_id($tax_line_item->lineItem['rate_id']);
 
                 if (isset($tax_info['tax_rate_id']) && isset($tax_info['tax_rate_class'])) {
                     $wc_tax_class = ('' == $tax_info['tax_rate_class']) ? 'standard' : $tax_info['tax_rate_class'];
@@ -108,6 +104,25 @@ class LS_Woo_Tax{
         $tax_rate_info = $wpdb->get_row($wpdb->prepare($sql_prepare, $tax_name, $tax_class), ARRAY_A);
         if ($tax_rate_info) return $tax_rate_info;
         return null;
+    }
+
+    /**
+     * Get woocommerce Tax Details using Tax Woocommerce tax_rate_id
+     * @param $tax_rate_id
+     * @return array|null|object|void
+     */
+    public static function get_tax_rate_by_rate_id($tax_rate_id)
+    {
+        if (empty($tax_rate_id)) {
+            return null;
+        }
+        global $wpdb;
+        $table_name = '`' . $wpdb->prefix . 'woocommerce_tax_rates`';
+        $sql_prepare = 'SELECT * FROM ' . $table_name.' WHERE  tax_rate_id= %s ';
+        $tax_rate_info = $wpdb->get_row($wpdb->prepare($sql_prepare, $tax_rate_id), ARRAY_A);
+        if ($tax_rate_info) return $tax_rate_info;
+        return null;
+
     }
 
     /**
@@ -185,7 +200,7 @@ class LS_Woo_Tax{
                 return $qboTaxInfo;
             }
 
-            $qboTaxClasses = self::getQuickBooksTaxClasses();
+            $qboTaxClasses = LS_QBO()->options()->getQuickBooksTaxClasses();
             foreach ($qboTaxClasses as $qboTaxInfo){
                 if($qboTaxId == $qboTaxInfo['id']){
                     return $qboTaxInfo;
