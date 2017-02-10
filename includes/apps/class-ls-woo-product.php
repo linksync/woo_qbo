@@ -13,7 +13,9 @@ class LS_Woo_Product
 
         //$product_id will not be empty if the product exists
         if (!empty($product_meta->product_id)) {
+            $woocommerceProduct = get_post($product_meta->product_id);
             $isQuickBooksPlus = LS_QBO()->is_qbo_plus();
+            $isQuickBooksAccountUs = LS_QBO()->isUsAccount();
             $productSyncingQuantityOption = $current_sync_option['quantity']['quantity'];
             $productSyncingTitleOrNameOption = $current_sync_option['title_or_name'];
             $productSyncingDescriptionOption = $current_sync_option['description'];
@@ -35,11 +37,36 @@ class LS_Woo_Product
                 $product_meta->setup_defaults();
                 $product_meta->set_sku($product->get_sku());
             }
+
+            $qboPurchasingInformation = $product->get_purchasing_information();
+            if(!empty($qboPurchasingInformation)){
+                /**
+                 * Update Woocommerce Product purchase note if QuickBooks Purchasing Information is not empty
+                 */
+                $product_meta->update_purchase_note($qboPurchasingInformation);
+            }
+
             $product_meta->set_product_id($qbo_product_id);
             $product_meta->set_product_type($product->get_product_type());
             $product_meta->set_income_account_id($product->get_income_account_id());
             $product_meta->set_expense_account_id($product->get_expense_account_id());
             $product_meta->set_asset_account_id($product->get_asset_account_id());
+
+            $qboTaxable = '';
+            if (!is_null($product->get_taxable())) {
+                $qboTaxable = 'true';
+                $isMetaProductTaxable = $product->get_taxable();
+                if (false === $isMetaProductTaxable || 'false' === $isMetaProductTaxable) {
+                    $qboTaxable = 'false';
+                }
+            }
+
+
+            $product_meta->update_cost_price($product->get_cost_price());
+            $product_meta->update_sell_price($product->get_sell_price());
+            $product_meta->update_list_price($product->get_list_price());
+
+            $product_meta->set_taxable($qboTaxable);
             $product_meta->update_tax_value($product->get_tax_value());
             $product_meta->update_tax_name($product->get_tax_name());
             $product_meta->update_tax_rate($product->get_tax_rate());
@@ -80,34 +107,52 @@ class LS_Woo_Product
             //Setting if product should be virtual or not
             $productType = $product->get_product_type();
 
-            $product_meta->set_virtual('no');
-            $product_meta->set_manage_stock('no');
+            if(true == $is_new){
+                $product_meta->set_virtual('no');
+                $product_meta->set_manage_stock('yes');
 
-            if (LS_QBO_ItemType::SERVICE == $productType) {
-                $product_meta->set_virtual('yes');
+                if (
+                    LS_QBO_ItemType::SERVICE == $productType ||
+                    LS_QBO_ItemType::NONINVENTORY == $productType
+                ) {
+                    $product_args['post_status'] = 'publish';
+                    $product_meta->set_manage_stock('no');
+                    $product_meta->set_virtual('yes');
+                }
+
             }
 
+            //Default product Status
+            $product_args['post_status'] = 'publish';
             if ('on' == $productSyncingQuantityOption) {
                 //Sync quantity is on
                 $product_meta->set_stock($product->get_quantity());
                 if ('on' == $productSyncingChangeStatusBaseOnQuantity) {
                     //Change product status base on quantity is on
                     $product_args['post_status'] = 'publish';
-                    if ($product->get_quantity() <= 0) {
+                    if ($product->get_quantity() <= 0 && LS_QBO_ItemType::INVENTORY == $productType) {
                         $product_args['post_status'] = 'draft';
                     }
 
                 }
-                $product_meta->set_manage_stock('yes');
-                if ($isQuickBooksPlus && $is_new && LS_QBO_ItemType::SERVICE == $productType) {
+                if(true == $is_new && $isQuickBooksPlus){
+                    $product_meta->set_manage_stock('yes');
+                }
+
+                if (
+                    $isQuickBooksPlus &&
+                    $is_new &&
+                    (LS_QBO_ItemType::SERVICE == $productType || LS_QBO_ItemType::NONINVENTORY == $productType)
+                ) {
+                    $product_args['post_status'] = 'publish';
+                    $product_meta->set_manage_stock('no');
                     $product_meta->set_virtual('yes');
                 }
             }
 
-            //Check if product is active in LWS
-            $product_args['post_status'] = 'draft';
-            if ($product->is_active()) {
-                $product_args['post_status'] = 'publish';
+            //Check if product is not active in LWS
+            if (!$product->is_active()) {
+                $product_args['post_status'] = 'draft';
             }
 
             if (
@@ -119,12 +164,24 @@ class LS_Woo_Product
                 $product_args['post_status'] = 'pending';
             }
 
+            //Do not change product status if it was set to private
+            if('private' == $woocommerceProduct->post_status){
+                $product_args['post_status'] = 'private';
+            }
+
+            error_log(json_encode($product));
+
             //Set woocommerce Product to taxable or not
             $tax_status = ('' == $product->get_tax_name()) ? 'none' : 'taxable';
             if (0 == $product->get_tax_rate()) {
                 $tax_status = 'none';
             }
             $product_meta->set_tax_status($tax_status);
+            //Check if QuickBooks Account is Us then use taxable parameter to set Woocommerce Tax status
+            if($isQuickBooksAccountUs){
+                $tax_status = ('' == $qboTaxable || 'false' == $qboTaxable) ? 'none' : 'taxable';
+                $product_meta->set_tax_status($tax_status);
+            }
 
             $category = $product->get_categories();
             if (
@@ -145,6 +202,85 @@ class LS_Woo_Product
             wp_update_post($product_args, true);
         }
 
+    }
+
+    public static function createQboShippingTaxProduct($shippingProductDetails)
+    {
+        set_time_limit(0);
+        $product_options = LS_QBO()->product_option();
+        $jsonShippingProduct = LS_QBO()->options()->getShippingProductWithTax();
+
+        $json_product = new LS_Json_Product_Factory();
+
+        if (!empty($jsonShippingProduct)) {
+            $product = new LS_Simple_Product($jsonShippingProduct);
+            //Set the id if it was created before and the plugin has details to this product
+            $json_product->set_id(get_qbo_id($product->get_id()));
+            $incomeAccountId = $product->get_income_account_id();
+            $expenseAccountId = $product->get_expense_account_id();
+            $assetAccountId = $product->get_asset_account_id();
+            $productType = $product->get_product_type();
+        }
+
+
+
+
+        /**
+         * Default setup for this product
+         */
+        $sku = 'shipping_with_tax';
+        $name = 'Shipping With Tax';
+        $description = 'Shipping Product with tax Created by linksync';
+        $json_product->set_sku($sku);
+        $json_product->set_name($name);
+        $json_product->set_description($description);
+        $json_product->set_income_account_id(isset($incomeAccountId) ? $incomeAccountId : $product_options->income_account());
+        $json_product->set_expense_account_id(isset($expenseAccountId) ? $expenseAccountId : $product_options->expense_account());
+        $json_product->set_asset_account_id(isset($assetAccountId) ? $assetAccountId : $product_options->inventory_asset_account());
+        $json_product->set_active(1);
+
+
+        $json_product->set_list_price($shippingProductDetails['price']);
+        $json_product->set_sell_price($shippingProductDetails['price']);
+        if(isset($productType) && $productType == LS_QBO_ItemType::INVENTORY){
+            $json_product->set_quantity($shippingProductDetails['quantity']);
+        }
+        $json_product->set_product_type(isset($productType) ? $productType : LS_QBO_ItemType::SERVICE);
+
+        $taxable = ('' != $shippingProductDetails['tax_id']) ? true : false;
+        $json_product->set_taxable($taxable);
+        $json_product->set_tax_value($shippingProductDetails['tax_value']);
+        $json_product->set_tax_name($shippingProductDetails['tax_name']);
+        $json_product->set_tax_rate($shippingProductDetails['tax_rate']);
+        $json_product->set_tax_id($shippingProductDetails['tax_id']);
+
+
+        $j_product = $json_product->get_json_product();
+        $result = LS_QBO()->api()->product()->save_product($j_product);
+        if (!empty($result['id'])) {
+
+            $orderProductSetup['id'] = get_qbo_id($result['id']);
+            $orderProductSetup['sku'] = $sku;
+            $orderProductSetup['price'] = $shippingProductDetails['price'];
+            $orderProductSetup['quantity'] = $shippingProductDetails['quantity'];
+            $orderProductSetup['discountAmount'] = 0;
+            $orderProductSetup['title'] = $description;
+            $orderProductSetup['taxable'] = $taxable;
+            $orderProductSetup['taxValue'] = $shippingProductDetails['tax_value'];
+            $orderProductSetup['taxName'] = $shippingProductDetails['tax_name'];
+            $orderProductSetup['taxRate'] = $shippingProductDetails['tax_rate'];
+            $orderProductSetup['taxId'] = $shippingProductDetails['tax_id'];
+            $orderProductSetup['discountTitle'] = '';
+
+            //Save or update the details to qbo shipping product to the wordpress option to use it later
+            LS_QBO()->options()->updateShippingProductWithTax(json_encode($result));
+            LSC_Log::add_dev_success('LS_Woo_Product::createQboShippingTaxProduct', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
+            return $orderProductSetup;
+        } else {
+            LSC_Log::add_dev_failed('LS_Woo_Product::createQboShippingTaxProduct', 'Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
+        }
+
+        return null;
     }
 
     /**

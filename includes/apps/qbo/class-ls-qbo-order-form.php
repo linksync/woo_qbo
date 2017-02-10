@@ -433,11 +433,11 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
                                             $id = $option['tax_mapping'][$tax_rate['tax_rate_id']][$tax_key];
                                             echo '<select name="tax_mapping[', $tax_rate['tax_rate_id'], '][', $tax_key, ']">';
                                             foreach ($qbo_tax_rates as $qbo_tax_rate) {
-
-                                                $val = $qbo_tax_rate['id'] . '|' . $qbo_tax_rate['name'] . '|' . $qbo_tax_rate['active'] . '|' . (isset($qbo_tax_rate['rateValue']) ? $qbo_tax_rate['rateValue'] : 0);
-                                                $selected = ($id == $val) ? 'selected' : '';
-                                                echo '<option ', $selected, ' value="', $val, '">', $qbo_tax_rate['name'], '</option>';
-
+                                                if($qbo_tax_rate['active']){
+                                                    $val = $qbo_tax_rate['id'] . '|' . $qbo_tax_rate['name'] . '|' . $qbo_tax_rate['active'] . '|' . (isset($qbo_tax_rate['rateValue']) ? $qbo_tax_rate['rateValue'] : 0);
+                                                    $selected = ($id == $val) ? 'selected' : '';
+                                                    echo '<option ', $selected, ' value="', $val, '">', $qbo_tax_rate['name'], '</option>';
+                                                }
                                             }
                                             echo '</select>';
 

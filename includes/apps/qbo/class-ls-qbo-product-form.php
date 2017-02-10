@@ -633,28 +633,30 @@ class LS_QBO_Product_Form
 										<tbody>
 										<?php
                                         foreach ($qbo_tax_rates as $qbo_tax_rate) {
-                                            ?>
-                                            <tr>
-												<td><?php echo $qbo_tax_rate['name']; ?></td>
-												<td>
-													<select name="tax_classes[<?php echo $qbo_tax_rate['id']; ?>]">
-														<?php
-                                                        foreach ($tax_classes as $tax_key => $tax_class) {
-                                                            $selected = '';
-                                                            if (!empty($selected_tax_classes)) {
-                                                                if (array_key_exists($qbo_tax_rate['id'], $selected_tax_classes)) {
-                                                                    if ($tax_key == $selected_tax_classes[$qbo_tax_rate['id']]) {
-                                                                        $selected = 'selected';
-                                                                    }
+                                            if ($qbo_tax_rate['active']) {
+                                                ?>
+                                                <tr>
+                                                    <td><?php echo $qbo_tax_rate['name']; ?></td>
+                                                    <td>
+                                                        <select name="tax_classes[<?php echo $qbo_tax_rate['id']; ?>]">
+                                                            <?php
+                                                            foreach ($tax_classes as $tax_key => $tax_class) {
+                                                                $selected = '';
+                                                                if (
+                                                                    !empty($selected_tax_classes) &&
+                                                                    array_key_exists($qbo_tax_rate['id'], $selected_tax_classes) &&
+                                                                    $tax_key == $selected_tax_classes[$qbo_tax_rate['id']]
+                                                                ) {
+                                                                    $selected = 'selected';
                                                                 }
+                                                                echo '<option ', $selected, ' value="', $tax_key, '">', $tax_class, '</option>';
                                                             }
-                                                            echo '<option ', $selected, ' value="', $tax_key, '">', $tax_class, '</option>';
-                                                        }
-                                                        ?>
-													</select>
-												</td>
-											</tr>
-                                            <?php
+                                                            ?>
+                                                        </select>
+                                                    </td>
+                                                </tr>
+                                                <?php
+                                            }
                                         }
                                         ?>
 										</tbody>
@@ -684,17 +686,18 @@ class LS_QBO_Product_Form
                                                         if (!empty($qbo_tax_rates)) {
                                                             echo '<select name="tax_classes[', $tax_key, ']">';
                                                             foreach ($qbo_tax_rates as $qbo_tax_rate) {
-                                                                $selected = '';
-                                                                if (!empty($selected_tax_classes)) {
-                                                                    if (!empty($selected_tax_classes[$tax_key])) {
-                                                                        if ($selected_tax_classes[$tax_key] == $qbo_tax_rate['id']) {
-                                                                            $selected = 'selected';
-                                                                        }
+                                                                if ($qbo_tax_rate['active']) {
+                                                                    $selected = '';
+                                                                    if (
+                                                                        !empty($selected_tax_classes) &&
+                                                                        !empty($selected_tax_classes[$tax_key]) &&
+                                                                        $selected_tax_classes[$tax_key] == $qbo_tax_rate['id']
+                                                                    ) {
+                                                                        $selected = 'selected';
                                                                     }
+
+                                                                    echo '<option ', $selected, ' value="', $qbo_tax_rate['id'], '">', $qbo_tax_rate['name'], '</option>';
                                                                 }
-
-                                                                echo '<option ', $selected, ' value="', $qbo_tax_rate['id'], '">', $qbo_tax_rate['name'], '</option>';
-
                                                             }
                                                             echo '</select>';
 

@@ -20,6 +20,24 @@ class LS_QBO_Options
         return self::$_instance;
     }
 
+    /**
+     * @param $jsonShippingProduct Product Details of the Shipping Product in QuickBooks that could have Tax
+     * @return bool
+     */
+    public function updateShippingProductWithTax($jsonShippingProduct)
+    {
+        return self::instance()->update_option('shipping_with_tax', $jsonShippingProduct);
+    }
+
+    /**
+     * Get the json Product representation of Shipping Product with tax
+     * @return mixed|void
+     */
+    public function getShippingProductWithTax()
+    {
+        return self::instance()->get_option('shipping_with_tax');
+    }
+
     public function set_accounts_error_message($message)
     {
         return self::instance()->update_option('accounts_error_msg', $message);

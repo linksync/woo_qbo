@@ -635,6 +635,16 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             echo '<p>Please go to your <a target="_blank" href="https://sg.qbo.intuit.com/app/salestax">QuickBooks Tax Setttings</a> and configure your Tax Rates.</p>';
         }
 
+        public function isUsAccount()
+        {
+            $qboInformation = self::options()->getQuickBooksInfo();
+            if (!empty($qboInformation['country']) && 'US' == $qboInformation['country']) {
+                return true;
+            }
+
+            return false;
+        }
+
     }
 
     /**

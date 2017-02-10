@@ -209,6 +209,7 @@ class LS_QBO_Sync
 
         $product_options = LS_QBO()->product_option();
         $current_sync_option = $product_options->get_current_product_syncing_settings();
+        $isQuickBooksUsAccount = LS_QBO()->isUsAccount();
 
         if ('two_way' == $current_sync_option['sync_type'] || 'qbo_to_woo' == $current_sync_option['sync_type']) {
             $product_type = $product->post->post_type;
@@ -243,8 +244,13 @@ class LS_QBO_Sync
                         $json_product->set_sell_price($product->get_regular_price());
 
                     }
-
                 }
+
+                /**
+                 * Set cost_price base on what has been saved before that comes from QuickBooks
+                 */
+                $qboCostPrice = $product_meta->get_cost_price();
+                $json_product->set_cost_price($qboCostPrice);
 
                 $productQuantityOption = $product_options->quantity();
                 $isProductVirtual = $product->is_virtual();
@@ -271,6 +277,13 @@ class LS_QBO_Sync
                     }
 
                 }
+                /**
+                 * Do not alter product_type in sending product json to LWS then to QuickBooks
+                 */
+                $qboProductType = $product_meta->get_product_type();
+                if(!empty($qboProductType)){
+                    $json_product->set_product_type($qboProductType);
+                }
 
 
                 $sku = $product->get_sku();
@@ -279,7 +292,7 @@ class LS_QBO_Sync
                     $product_meta->update_sku($sku);
                 }
                 $json_product->set_sku($sku);
-                $json_product->set_active(($product->post->post_status == 'publish') ? 1 : 0);
+                $json_product->set_active(1);
 
                 $income_account_id = ('' != $product_meta->get_income_account_id()) ? $product_meta->get_income_account_id() : $product_options->income_account();
                 $expense_account_id = ('' != $product_meta->get_expense_account_id()) ? $product_meta->get_expense_account_id() : $product_options->expense_account();
@@ -289,8 +302,19 @@ class LS_QBO_Sync
                 $json_product->set_expense_account_id($expense_account_id);
                 $json_product->set_asset_account_id($asset_account_id);
 
+                $wooPurchaseNote = $product_meta->get_purchase_note();
+                $json_product->set_purchasing_information(null);
+                if(!empty($wooPurchaseNote)){
+                    $json_product->set_purchasing_information($wooPurchaseNote);
+                }
+
                 $wooTaxClass = ('' == $product_meta->get_tax_class()) ? 'standard' : $product_meta->get_tax_class();
                 $qboTaxClassInfo = LS_Woo_Tax::getQuickBooksTaxInfoByWooTaxKey($wooTaxClass);
+
+                if ($isQuickBooksUsAccount) {
+                    $taxable = ('none' == $product_meta->get_tax_status()) ? 'false' : 'true';
+                    $json_product->set_taxable($taxable);
+                }
 
                 $qbo_includes_tax = ('false' === $product_meta->get_qbo_includes_tax()) ? false : true;
                 $json_product->set_includes_tax($qbo_includes_tax);
@@ -339,6 +363,8 @@ class LS_QBO_Sync
                     $product_meta->update_expense_account_id($product->get_expense_account_id());
                     $product_meta->update_asset_account_id($product->get_asset_account_id());
                     $product_meta->update_product_type($product->get_product_type());
+                    $product_meta->update_cost_price($product->get_cost_price());
+
 
                     LSC_Log::add_dev_success('LS_QBO_Sync::import_single_product_to_qbo', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
 
@@ -375,6 +401,7 @@ class LS_QBO_Sync
         set_time_limit(0);
         $order_option = LS_QBO()->order_option();
         $product_syncing_option = LS_QBO()->product_option();
+        $isQuickBooksUsAccount = LS_QBO()->isUsAccount();
 
         $order = wc_get_order($order_id);
         $selected_order_status = ls_selected_order_status_to_trigger_sync();
@@ -446,7 +473,6 @@ class LS_QBO_Sync
                 if(empty($taxId)){
                     $wooTaxClass = ('' == $product_meta->get_tax_class()) ? 'standard' : $product_meta->get_tax_class();
                     $qboTaxClassInfo = LS_Woo_Tax::getQuickBooksTaxInfoByWooTaxKey($wooTaxClass);
-                    error_log(json_encode($qboTaxClassInfo));
                     if (!empty($qboTaxClassInfo['id'])) {
                         $taxId = $qboTaxClassInfo['id'];
                         $taxName = $qboTaxClassInfo['name'];
@@ -456,6 +482,16 @@ class LS_QBO_Sync
                 }
 
 
+                $qboTaxable = ('none' == $product_meta->get_tax_status()) ? 'false': 'true';
+                if($isQuickBooksUsAccount){
+                    $metGetTaxable = $product_meta->get_taxable();
+                    $qboTaxable = ('' == $metGetTaxable) ? $qboTaxable : $metGetTaxable;
+                    if('false' == $qboTaxable){
+                        $productTaxStatus =  'none';
+                        $taxId =  '';
+                    }
+                }
+
                 if ('none' == $productTaxStatus && empty($taxId)) {
                     $taxName = null;
                     $taxId = null;
@@ -464,6 +500,8 @@ class LS_QBO_Sync
                 }
 
 
+                //Woocommerce line tax
+                $taxValue = $orderLineItem->lineItem['line_tax'];
                 $products[] = array(
                     'id' => get_qbo_id($product_meta->get_product_id()),
                     'sku' => $pro_object->get_sku(),
@@ -471,6 +509,7 @@ class LS_QBO_Sync
                     'price' => $price,
                     'quantity' => $item['qty'],
                     'discountAmount' => $discount,
+                    'taxable' => $qboTaxable,
                     'taxName' => $taxName,
                     'taxId' => $taxId,
                     'taxRate' => $taxRate,
@@ -579,15 +618,35 @@ class LS_QBO_Sync
             }
 
 
-            $products[] = array(
-                "price" => isset($shipping_cost) ? $shipping_cost : null,
-                "quantity" => 1,
-                "sku" => "shipping",
-                'taxName' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
-                'taxId' => ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null,
-                'taxRate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
-                'taxValue' => null
-            );
+            if ($isQuickBooksUsAccount && !empty($shipping_tax)) {
+
+
+                $shippingProductWithTax = array(
+                    "price" => isset($shipping_cost) ? $shipping_cost : null,
+                    "quantity" => 1,
+                    'tax_name' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
+                    'tax_id' => ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null,
+                    'tax_rate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
+                    'tax_value' => $shipping_tax
+                );
+                $shippingProductLineItem = LS_Woo_Product::createQboShippingTaxProduct($shippingProductWithTax);
+
+
+                if (!empty($shippingProductLineItem)) {
+                    $products[] = $shippingProductLineItem;
+                }
+
+            } else {
+                $products[] = array(
+                    "price" => isset($shipping_cost) ? $shipping_cost : null,
+                    "quantity" => 1,
+                    "sku" => "shipping",
+                    'taxName' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
+                    'taxId' => ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null,
+                    'taxRate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
+                    'taxValue' => $shipping_tax
+                );
+            }
         }
 
         $products = !empty($products) ? $products : null;
@@ -783,6 +842,10 @@ class LS_QBO_Sync
 
         if ('disabled' == $current_sync_option['sync_type']) {
             //return if sync type is disabled
+            return;
+        }
+        if ('shipping_with_tax' == $product->get_sku() || 'shipping' == $product->get_sku()) {
+            //Do not create this product in woocommerce if the sku is either shipping_with_tax or shipping
             return;
         }
 
