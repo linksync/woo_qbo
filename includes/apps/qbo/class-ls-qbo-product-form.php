@@ -277,6 +277,7 @@ class LS_QBO_Product_Form
 
         LS_QBO()->options()->set_accounts_error_message($accounts_error);
         LS_QBO()->set_quantity_option_base_on_qboinfo();
+
     }
 
     public function accounts_error_message()

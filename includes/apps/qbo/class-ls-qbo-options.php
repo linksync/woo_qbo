@@ -20,6 +20,57 @@ class LS_QBO_Options
         return self::$_instance;
     }
 
+    public function setTaxRateAndCodeObjects($lwsApiTaxCodesObject)
+    {
+        $modifiedTaxCodeAndTaxRateRef = array();
+
+        if (!empty($lwsApiTaxCodesObject)) {
+
+            foreach ($lwsApiTaxCodesObject as $taxCodeObject) {
+
+                if (!empty($taxCodeObject['taxIds'])) {
+                    foreach ($taxCodeObject['taxIds'] as $taxRateId){
+                        $modifiedTaxCodeAndTaxRateRef['tax_rate_id_'.$taxRateId] = $taxCodeObject;
+                    }
+                }
+
+                if(!empty($taxCodeObject['id']) && !empty($taxCodeObject['taxIds'])){
+                    $modifiedTaxCodeAndTaxRateRef['tax_code_id_'.$taxCodeObject['id']] = $taxCodeObject['taxIds'];
+                }
+            }
+        }
+
+        return self::instance()->update_option('lwsapitaxrateandcoderef', $modifiedTaxCodeAndTaxRateRef);
+    }
+
+    public function getTaxRateAndCodeOjects()
+    {
+        return self::instance()->get_option('lwsapitaxrateandcoderef', null);
+    }
+
+    public function getTaxCodeIdByTaxRateId($taxRateId)
+    {
+        $taxRateAndTaxCodeObjects = self::instance()->getTaxRateAndCodeOjects();
+        if (!empty($taxRateId) && !empty($taxRateAndTaxCodeObjects) && isset($taxRateAndTaxCodeObjects['tax_rate_id_' . $taxRateId])) {
+            return $taxRateAndTaxCodeObjects['tax_rate_id_' . $taxRateId]['id'];
+        }
+
+        return null;
+    }
+
+    public function getTaxRateIdsByTaxCodeId($taxCodeId)
+    {
+        $taxRateAndTaxCodeObjects = self::instance()->getTaxRateAndCodeOjects();
+
+        if (!empty($taxCodeId) && !empty($taxRateAndTaxCodeObjects) && isset($taxRateAndTaxCodeObjects['tax_code_id_' . $taxCodeId])) {
+
+            return $taxRateAndTaxCodeObjects['tax_code_id_' . $taxCodeId];
+        }
+
+        return null;
+
+    }
+    
     /**
      * @param $jsonShippingProduct Product Details of the Shipping Product in QuickBooks that could have Tax
      * @return bool

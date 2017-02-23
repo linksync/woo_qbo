@@ -52,7 +52,8 @@ class LS_QBO_Api{
 	 * @return array
 	 */
 	public function get_all_active_tax_code(){
-		return $this->api->get('qbo/taxcode');
+	    $taxCodes = $this->api->get('qbo/taxcode');
+		return isset($taxCodes['taxCodes']) ? $taxCodes['taxCodes'] : null;
 	}
 
     /**
@@ -69,7 +70,7 @@ class LS_QBO_Api{
 
     public function getDepositAccounts()
     {
-        $depositAccounts = $this->getAccountsByClassification('Asset');
+        $depositAccounts = $this->get_accounts('depositto');
         return isset($depositAccounts['accounts']) ? $depositAccounts['accounts'] : null;
     }
 

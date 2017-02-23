@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.7-beta
+  Version: 2.5.8-beta
  */
 
 /*
@@ -23,7 +23,7 @@ class linksync
     /**
      * @var string
      */
-    public static $version = '2.5.7';
+    public static $version = '2.5.8';
 
     public function __construct()
     {
@@ -152,6 +152,27 @@ class linksync
         if (isset($_GET['page']) && $_GET['page'] == 'linksync-wizard') {
             wp_enqueue_style('admin-linksync-style', LS_ASSETS_URL . 'css/wizard/wizard-styles.css');
         }
+
+        $screen = get_current_screen();
+        if('shop_order' == $screen->id){
+            wp_enqueue_script( 'ls-shop-order-scripts', LS_ASSETS_URL.'js/ls-shop-order.js', array( 'jquery' ) );
+        }
+    }
+
+    /**
+     * @return string Returns the web hook url of the plugin
+     */
+    public static function getWebHookUrl()
+    {
+        $webHookUrlCode = get_option('webhook_url_code');
+        if(is_vend()){
+            //Used for Vend update url
+            return plugins_url() . '/linksync/update.php?c=' . $webHookUrlCode;
+        }
+
+        //Used for QuickBooks update url
+        $url = admin_url('admin-ajax.php?action=' . $webHookUrlCode);
+        return $url;
     }
 
 
@@ -929,9 +950,9 @@ if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_conn
 }
 
 if (get_option('order_sync_type') == 'wc_to_vend') {
-    add_action('woocommerce_process_shop_order_meta', 'linksync_OrderFromBackEnd'); # Order From Back End (Admin Order)  
-    add_action('woocommerce_thankyou', 'linksync_OrderFromFrontEnd', 10); # Order From Front End (User Order)
-    //add_action('transition_post_status', 'post_unpublished', 12, 3);
+//    add_action('woocommerce_process_shop_order_meta', 'linksync_OrderFromBackEnd'); # Order From Back End (Admin Order)
+//    add_action('woocommerce_thankyou', 'linksync_OrderFromFrontEnd', 10); # Order From Front End (User Order)
+//    add_action('transition_post_status', 'post_unpublished', 12, 3);
 }
 if (get_option('order_sync_type') == 'disabled') {
     $check_product_syncing_setting = get_option('product_sync_type');

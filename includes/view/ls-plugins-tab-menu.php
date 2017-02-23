@@ -1,5 +1,4 @@
 <?php if ( ! defined( 'ABSPATH' ) ) exit('Access is Denied');
-
 update_option('linksync_sycning_status', null);
 /**
 *   Check the current selected tab 
@@ -46,6 +45,17 @@ if(!$file_perms){ ?>
         <p><?php "Alert: File permission on <b>wp-content</b> will prevent linksync from syncing and/or functioning corectly.<a href='https://www.linksync.com/help/woocommerce-perms'>Please click here for more information</a>."; ?></p>
     </div> 
 <?php } ?>
+
+<?php
+if(is_qbo()){
+    LS_QBO_Sync::lwsApiHasUpdates();
+    $changeToTaxCodeApi = get_option('ls_apichangetotaxcode', '');
+    if(!empty($changeToTaxCodeApi)){
+        LS_Notice_Message_Builder::notice($changeToTaxCodeApi, 'error big-error-message');
+    }
+}
+
+?>
 
 <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
     <a href="<?php echo admin_url('admin.php?page=linksync')?>" class="nav-tab <?php if (isset($configuration_tab)) echo $configuration_tab; ?>">Configuration</a>

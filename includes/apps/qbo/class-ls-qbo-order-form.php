@@ -476,7 +476,7 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
                 <label>
                     <?php
                     if (empty($option['location_list'])) {
-                        echo '<p class="color-red">(Empty location)</p>';
+                        echo '<p class="color-red">No Location data retrieved. You need to set it on QuickBooks. <a target="_blank" href="https://help.linksync.com/hc/en-us/articles/115000147390">See this guide on how to create at least one</a> </p>';
                         LS_QBO()->order_option()->update_location_status('off');
                     } else {
                         ?>
@@ -484,9 +484,9 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
                                type="checkbox" <?php echo ($option['location']['location_status'] == 'on') ? 'checked' : ''; ?> >
                         Enable
                         <?php
-                        help_link(array(
+                        /*help_link(array(
                             'title' => 'Select this option if you\'d like customer data, such as name, email address and shipping and billing address, to be included when exporting orders to Vend.'
-                        ));
+                        ));*/
                     }
                     ?>
                 </label>
@@ -496,9 +496,12 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
                         $display = ($option['location']['location_status'] != 'on') ? 'style="display:none;"' : '';
                         echo '<select name="qbo_location" ', $display, '>';
                         foreach ($option['location_list'] as $location) {
-                            echo '<option value="', $location['id'], '">';
+
+                            $selected = ($option['location']['selected_location'] == $location['id']) ? 'selected' : '';
+                            echo '<option value="', $location['id'], '" ',$selected,'>';
                             echo $location['name'];
                             echo '</option>';
+
                         }
                         echo '</select>';
                     }
@@ -531,27 +534,29 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
                 <label>
                     <?php
                     if (empty($qbo_classes)) {
-                        echo '<p class="color-red">(No data from QuickBooks)</p>';
+                        echo '<p class="color-red">No Classes data retrieved. You need to set it on QuickBooks. <a target="_blank" href="https://help.linksync.com/hc/en-us/articles/115000155504">See this guide on how to create at least one</a> </p>';
                     } else {
                         ?>
                         <input name="class_checkbox"
                                type="checkbox" <?php echo ($option['class_status'] == 'on') ? 'checked' : ''; ?> >
                         Enable
                         <?php
-                        help_link(array(
+                        /*help_link(array(
                             'title' => 'Select this option if you\'d like customer data, such as name, email address and shipping and billing address, to be included when exporting orders to Vend.'
-                        ));
+                        ));*/
                     }
                     ?>
                 </label>
                 <div class="sub-option">
                     <?php
                     if (!empty($qbo_classes)) {
+
                         $display = ($option['class_status'] != 'on') ? 'style="display:none;"' : '';
                         echo '<select name="qbo_class" ', $display, ' >';
                         foreach ($qbo_classes as $qbo_class) {
+                            $selected = ($option['selected_class'] == $qbo_class['id']) ? 'selected': '';
                             ?>
-                            <option value="<?php echo $qbo_class['id']; ?>">
+                            <option value="<?php echo $qbo_class['id']; ?>" <?php echo $selected; ?> >
                                 <?php echo $qbo_class['fullyQualifiedName'] ?>
                             </option>
                             <?php
@@ -673,6 +678,7 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
     public function update_order_syncing_settings($user_options)
     {
 
+
         $order_option = LS_QBO()->order_option();
         if (!is_array($user_options)) {
             parse_str($user_options, $user_options);
@@ -735,6 +741,7 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
         if (isset($user_options['qbo_class'])) {
             $order_option->update_selected_order_class($user_options['qbo_class']);
         }
+
 
     }
 

@@ -179,6 +179,7 @@
             var popup_btn_con           =   $('#pop_up_btn_container');
             var sync_message            =   $('#sync_message');
             var sync_progress           =   $('#sync_progress');
+            var bigErrorMsg             =   $('.big-error-message');
 
             btn_no.hide();
             popup_message.hide();
@@ -226,6 +227,13 @@
                             sync_message.html("Importing Products to Woocomerce.");
                             sync_progress.html(p_res);
                             console.log(p_res);
+
+                            // post_data({action: 'ls_product_sync_all_to_woo_happens'}, function (syncAllResponse) {
+                            //     if('yes' != syncAllResponse.show_big_error){
+                            //         //Hide the big error message if not yes
+                            //         bigErrorMsg.hide();
+                            //     }
+                            // })
                         });
                     }
 

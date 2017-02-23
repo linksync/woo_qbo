@@ -206,3 +206,10 @@ label {
 .close-container > div{
     float: right;
 }
+
+.big-error-message{
+
+}
+.big-error-message p{
+    font-size: 30px;
+}

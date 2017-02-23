@@ -22,7 +22,7 @@ class LS_QBO_Product_Option{
 	 * @return string it could be two_way, qbo_to_woo or disabled
 	 */
 	public function sync_type(){
-		return get_option( 'ls_psqbo_sync_type', 'disabled' );
+		return get_option( 'ls_psqbo_sync_type', 'two_way' );
 	}
 
 	/**
@@ -57,7 +57,7 @@ class LS_QBO_Product_Option{
 	 * @return string it could be name or sku
 	 */
 	public function match_product_with(){
-		return get_option( 'ls_psqbo_match_product_with', 'name' );
+		return get_option( 'ls_psqbo_match_product_with', 'sku' );
 	}
 
 	/**
@@ -78,7 +78,7 @@ class LS_QBO_Product_Option{
 	 * @return string on or off
 	 */
 	public function title_or_name(){
-		return get_option( 'ls_psqbo_title_or_name', 'off' );
+		return get_option( 'ls_psqbo_title_or_name', 'on' );
 	}
 
 	/**
@@ -87,11 +87,8 @@ class LS_QBO_Product_Option{
 	 * @return string on or off
 	 */
 	public function update_title_or_name( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_title_or_name', $on_or_off );
-			}
-		}
+	    $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_title_or_name', $on_or_off );
 		return $this->title_or_name();
 	}
 
@@ -108,12 +105,8 @@ class LS_QBO_Product_Option{
 	 * @return string on or off
 	 */
 	public function update_description( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_description', $on_or_off );
-			}
-		}
-
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_description', $on_or_off );
 		return $this->description();
 	}
 
@@ -130,11 +123,8 @@ class LS_QBO_Product_Option{
 	 * @return string
 	 */
 	public function update_price( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_price', $on_or_off );
-			}
-		}
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_price', $on_or_off );
 		return $this->price();
 	}
 
@@ -203,11 +193,8 @@ class LS_QBO_Product_Option{
 	 * @return string on or off
 	 */
 	public function update_quantity( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_quantity', $on_or_off );
-			}
-		}
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_quantity', $on_or_off );
 		return $this->quantity();
 	}
 
@@ -220,18 +207,19 @@ class LS_QBO_Product_Option{
 	}
 
 	public function update_change_product_status( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_change_product_status', $on_or_off );
-			}
-		}
-
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_change_product_status', $on_or_off );
 		return $this->change_product_status();
 	}
 
     public function inventory_asset_account($default = '')
     {
-        return get_option('ls_ps_qbo_inventory_asset_account', $default);
+        $inventoryAssetAccount = get_option('ls_ps_qbo_inventory_asset_account', $default);
+        if(empty($inventoryAssetAccount)){
+            $expenseAccounts = LS_QBO()->options()->getAssetAccounts();
+            return !empty($expenseAccounts[0]['id']) ? $expenseAccounts[0]['id'] : '';
+        }
+        return $inventoryAssetAccount;
     }
 
     public function update_inventory_asset_account($inventory_asset_account)
@@ -253,7 +241,12 @@ class LS_QBO_Product_Option{
 
     public function expense_account($default = '')
     {
-        return get_option('ls_ps_qbo_expense_account', $default);
+        $expenseAccount = get_option('ls_ps_qbo_expense_account', $default);
+        if(empty($expenseAccount)){
+            $expenseAccounts = LS_QBO()->options()->getExpenseAccounts();
+            return !empty($expenseAccounts[0]['id']) ? $expenseAccounts[0]['id'] : '';
+        }
+        return $expenseAccount;
     }
 
     public function update_expense_account($expense_account)
@@ -271,7 +264,12 @@ class LS_QBO_Product_Option{
 
     public function income_account($default = '')
     {
-        return get_option('ls_psqbo_income_account', $default);
+        $incomeAccount = get_option('ls_psqbo_income_account', $default);
+        if(empty($incomeAccount)){
+            $incomeAccounts = LS_QBO()->options()->getIncomeAccounts();
+            return !empty($incomeAccounts[0]['id']) ? $incomeAccounts[0]['id'] : '';
+        }
+        return $incomeAccount;
     }
 
 	/**
@@ -289,12 +287,12 @@ class LS_QBO_Product_Option{
         return delete_option('ls_psqbo_income_account');
 	}
 
-	/**
-	 * Get Category Option
-	 * @return
-	 */
+    /**
+     * Get Category Option
+     * @return mixed|void
+     */
 	public function category(){
-		return get_option( 'ls_psqbo_category', 'off' );
+		return get_option( 'ls_psqbo_category', 'on' );
 	}
 
 	/**
@@ -302,6 +300,7 @@ class LS_QBO_Product_Option{
 	 * @return mixed|void
 	 */
 	public function update_category( $on_or_off ){
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
 		update_option( 'ls_psqbo_category', $on_or_off);
 		return $this->category();
 	}
@@ -320,11 +319,8 @@ class LS_QBO_Product_Option{
 	 * @return string on or off
 	 */
 	public function update_product_status( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_product_status', $on_or_off );
-			}
-		}
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_product_status', $on_or_off );
 		return $this->product_status();
 	}
 
@@ -337,12 +333,8 @@ class LS_QBO_Product_Option{
 	}
 
 	public function update_create_new( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_create_new', $on_or_off );
-			}
-		}
-
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_create_new', $on_or_off );
 		return $this->create_new();
 	}
 
@@ -360,12 +352,8 @@ class LS_QBO_Product_Option{
 	 * @return string on or off
 	 */
 	public function update_delete( $on_or_off ){
-		if( !empty( $on_or_off ) ){
-			if( 'on' == $on_or_off || 'off' == $on_or_off ){
-				update_option( 'ls_psqbo_delete_option', $on_or_off );
-			}
-		}
-
+        $on_or_off = ('on' == $on_or_off) ? 'on': 'off';
+        update_option( 'ls_psqbo_delete_option', $on_or_off );
 		return $this->delete();
 	}
 

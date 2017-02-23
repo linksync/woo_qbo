@@ -14,7 +14,7 @@
 	<input type="hidden" name="action" value="apikey" />
 	<input type="hidden" name="nextpage" value="2" />
 	<p class="form-holder">
-		<input type="text" id="api_key" name="linksync[api_key]" class="form-field" placeholder="Enter you API KEY" />
+		<input type="text" id="api_key" name="linksync[api_key]" class="form-field" placeholder="Enter you API KEY"  value="<?php echo $laid; ?>"/>
 	</p>
 	<p class="form-holder">
 		<input type="submit" name="submit" value="Next Step" />

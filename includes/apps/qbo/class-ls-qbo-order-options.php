@@ -22,7 +22,7 @@ class LS_QBO_Order_Option{
 	 * @return string either disabled or woo_to_qbo
 	 */
 	public function sync_type(){
-		return get_option( 'ls_osqbo_sync_type' , 'disabled');
+		return get_option( 'ls_osqbo_sync_type' , 'woo_to_qbo');
 	}
 
 	/**
@@ -351,7 +351,7 @@ class LS_QBO_Order_Option{
 			'tax_mapping'			=>	$this->tax_mapping(),
 			'location'				=>	array(
 											'location_status'			=>	$this->location_status(),
-											'selectected_location'		=>	$this->selected_location()
+											'selected_location'		    =>	$this->selected_location()
 										),
 			'class'					=>	array(
 											'class_status'				=>	$this->class_status(),

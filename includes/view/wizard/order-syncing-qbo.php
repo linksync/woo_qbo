@@ -19,8 +19,8 @@
 		<p class="form-holder">
 			<strong>Would you like to export your Customer Data to QuickBooks?</strong>
 			<select name="linksync[order_woo_to_qbo_export_customer]" id="order_woo_to_qbo_export_customer" class="form-field">
-				<option value="export_as_customer_data">Yes</option>
-				<option value="export_as_woo_sale">No</option>
+				<option <?php echo ('export_as_customer_data' == $export_customer_data) ? 'selected': ''; ?> value="export_as_customer_data">Yes</option>
+				<option <?php echo ('export_as_woo_sale' == $export_customer_data) ? 'selected': ''; ?> value="export_as_woo_sale">No</option>
 			<select>
 			<br>
 			<span><em>If No, customer will be exported as WooCommerce Sale</em></span>
@@ -28,24 +28,24 @@
 		<p class="form-holder">
 			<strong>Post to QuickBooks as</strong>
 			<select name="linksync[order_woo_to_qbo_post_as]" id="order_woo_to_qbo_post_as" class="form-field">
-				<option value="sales_receipt">Sales Receipt</option>
-				<option value="sales_invoice">Invoice</option>
+				<option <?php echo ('sales_receipt' == $post_to_quickbooks_as) ? 'selected': ''; ?> value="sales_receipt">Sales Receipt</option>
+				<option <?php echo ('sales_invoice' == $post_to_quickbooks_as) ? 'selected': ''; ?> value="sales_invoice">Invoice</option>
 			<select>
 		</p>
 		<p class="form-holder">
 			<strong>Order Status</strong>
-			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-pending" type="checkbox">Pending Payment</label><br/>
-			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-processing" type="checkbox">Processing</label><br/>
-			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-on-hold" type="checkbox">On Hold</label><br/>
-			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-completed" type="checkbox">Completed</label><br/>
+			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-pending" type="checkbox">Pending Payment</label><br/>
+			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-processing" type="checkbox">Processing</label><br/>
+			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-on-hold" type="checkbox">On Hold</label><br/>
+			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-completed" type="checkbox">Completed</label><br/>
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-cancelled" type="checkbox">Cancelled</label><br/>
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-refunded" type="checkbox">Refunded</label>
 		</p>
 		<p class="form-holder">
 			<strong>Order number for QuickBooks</strong>
 			<select name="linksync[order_woo_to_qbo_order_number]" id="order_woo_to_qbo_order_number" class="form-field">
-				<option value="use_qbo">Use QuickBooks to set order number</option>
-				<option value="use_woo">Use Woocommerce to set order number</option>
+				<option <?php echo ('use_qbo' == $order_number_for_quickbooks)? 'selected': ''; ?> value="use_qbo">Use QuickBooks to set order number</option>
+				<option <?php echo ('use_woo' == $order_number_for_quickbooks)? 'selected': ''; ?> value="use_woo">Use Woocommerce to set order number</option>
 			<select>
 		</p>
 	</div>
@@ -58,20 +58,25 @@
 <script type="text/javascript">
 	jQuery(function() {
 		// First Load
-		jQuery('#order_syncing_type').val('disabled');
+		jQuery('#order_syncing_type').val('<?php echo $order_syncing_type; ?>');
+        order_syncing_form_load();
 		
 		jQuery('#order_syncing_type').change(function() {
-			var val = jQuery(this).val();
-			if(val != 'disabled') {
-				switch(val) {
-					case 'woo_to_qbo':
-						jQuery('#linksync_order_two_way').hide('slow');
-						jQuery('#linksync_order_woo_to_qbo').show('slow');
-						break;
-				}
-			} else {
-				jQuery('.linksync_order_syncing_options').hide('slow');
-			}
+            order_syncing_form_load();
 		});
+
+		function order_syncing_form_load() {
+            var val = jQuery('#order_syncing_type').val();
+            if(val != 'disabled') {
+                switch(val) {
+                    case 'woo_to_qbo':
+                        jQuery('#linksync_order_two_way').hide('slow');
+                        jQuery('#linksync_order_woo_to_qbo').show('slow');
+                        break;
+                }
+            } else {
+                jQuery('.linksync_order_syncing_options').hide('slow');
+            }
+        }
 	});
 </script>

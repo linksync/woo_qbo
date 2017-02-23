@@ -68,6 +68,9 @@ if (isset($_POST['add_apiKey'])) {
         $class1 = 'updated';
         $class2 = 'error';
     }
+    if (is_vend()) {
+        LS_Vend()->updateWebhookConnection();
+    }
     ?>
     <script>
 
@@ -176,6 +179,9 @@ if (isset($_POST['apikey_update'])) {
         $response = "API key is empty!!";
         $class1 = 'updated';
         $class2 = 'error';
+    }
+    if (is_vend()) {
+        LS_Vend()->updateWebhookConnection();
     }
     ?>
     <script>

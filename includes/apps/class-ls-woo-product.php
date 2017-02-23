@@ -169,7 +169,11 @@ class LS_Woo_Product
                 $product_args['post_status'] = 'private';
             }
 
-            error_log(json_encode($product));
+            //Do not change product status if it was set to pending
+            if('pending' == $woocommerceProduct->post_status){
+                $product_args['post_status'] = 'pending';
+            }
+
 
             //Set woocommerce Product to taxable or not
             $tax_status = ('' == $product->get_tax_name()) ? 'none' : 'taxable';

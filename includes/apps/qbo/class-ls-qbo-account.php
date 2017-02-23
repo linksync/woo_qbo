@@ -133,7 +133,7 @@ class LS_QBO_Account
 
     public function dropTable()
     {
-        $this->wpdb->query("DRO TABLE IF EXISTS $this->tableName ");
+        $this->wpdb->query("DROP TABLE IF EXISTS $this->tableName ");
     }
     
 }

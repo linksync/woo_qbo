@@ -220,4 +220,41 @@ class LS_Woo_Tax{
         return get_option('ls_qbo_tax_classes');
     }
 
+    /**
+     * Returns the tax data to be used either use qbo/taxcode or qbo/tax endpoint
+     *
+     * @param null $currentLaidInfo
+     * @return array
+     */
+    public static function getQuickBookTaxDataToBeUsed($currentLaidInfo = null)
+    {
+        set_time_limit(0);
+        $taxDataToBeUsed = array();
+        $qbo_api = LS_QBO()->api();
+        $laidInfo = null;
+
+
+        if (null == $currentLaidInfo) {
+            $laidInfo = $qbo_api->get_laid_info();
+            update_option('ls_laid_info', $laidInfo);
+            $currentLaidInfo = $laidInfo;
+        }
+
+        if (!empty($laidInfo)) {
+            $taxDataToBeUsed = $qbo_api->get_all_tax_rate();
+            if (!empty($currentLaidInfo['app_version']) && '1.1' == $currentLaidInfo['app_version']) {
+                //Change to tax code data
+                $taxDataToBeUsed = $qbo_api->get_all_active_tax_code();
+                LS_QBO()->options()->setTaxRateAndCodeObjects($taxDataToBeUsed);
+                //update_option('ls_apichangetotaxcode', 'Linksync has a major update on api so you need to update to latest version', 'yes');
+            } else {
+                //delete_option('ls_apichangetotaxcode');
+            }
+        }
+
+
+
+        return $taxDataToBeUsed;
+    }
+
 }

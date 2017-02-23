@@ -42,7 +42,7 @@ class LS_QBO_Sync
             //$order_action_hooks[] = 'woocommerce_thankyou';
             $order_action_hooks[] = 'woocommerce_process_shop_order_meta';
             foreach ($order_action_hooks as $order_action_hook) {
-                add_action($order_action_hook, array('LS_QBO_Sync', 'import_single_order_to_qbo'));
+                add_action($order_action_hook, array('LS_QBO_Sync', 'import_single_order_to_qbo'), 1);
             }
         }
 
@@ -55,10 +55,40 @@ class LS_QBO_Sync
 
 
         add_action('wp_ajax_ls_product_options', array('LS_QBO_Sync', 'product_options'));
+        add_action('wp_ajax_nopriv_ls_product_options', array('LS_QBO_Sync', 'product_options'));
+
         add_action('wp_ajax_ls_order_options', array('LS_QBO_Sync', 'order_options'));
+        add_action('wp_ajax_nopriv_ls_order_options', array('LS_QBO_Sync', 'order_options'));
+
+        add_action('wp_ajax_ls_taxrate_taxcode', array('LS_QBO_Sync', 'taxCodeAndRateReferences'));
+        add_action('wp_ajax_nopriv_ls_taxrate_taxcode', array('LS_QBO_Sync', 'taxCodeAndRateReferences'));
 
         add_action('wp_ajax_qbo_accounts_webhook', array('LS_QBO_Sync', 'updateQuickBooksAccounts'));
         add_action('wp_ajax_nopriv_qbo_accounts_webhook', array('LS_QBO_Sync', 'updateQuickBooksAccounts'));
+
+        add_action('wp_ajax_ls_dev_logs', array('LS_QBO_Sync', 'showDevLogs'));
+        add_action('wp_ajax_nopriv_ls_dev_logs', array('LS_QBO_Sync', 'showDevLogs'));
+
+        add_action('wp_ajax_ls_lws_api_update', array('LS_QBO_Sync', 'lwsApiHasUpdates'));
+        add_action('wp_ajax_nopriv_ls_lws_api_update', array('LS_QBO_Sync', 'lwsApiHasUpdates'));
+
+    }
+
+    /**
+     * Prepared method in case there are LWS Api updates that the plugin needs to do or change something
+     */
+    public static function lwsApiHasUpdates()
+    {
+        set_time_limit(0);
+        $taxDataToBeUsed = LS_Woo_Tax::getQuickBookTaxDataToBeUsed();
+        LS_QBO()->options()->updateQuickBooksTaxClasses($taxDataToBeUsed);
+
+    }
+
+    public static function showDevLogs()
+    {
+        echo LSC_Log::printallLogs();
+        die();
     }
 
     public static function updateQuickBooksAccounts()
@@ -79,6 +109,11 @@ class LS_QBO_Sync
         wp_send_json(array('error' => 'QuickBooks Account update to Woocommerce was not triggered'));
     }
 
+    public static function taxCodeAndRateReferences()
+    {
+        wp_send_json(LS_QBO()->options()->getTaxRateAndCodeOjects());
+        die();
+    }
     public static function product_options()
     {
         wp_send_json(LS_QBO()->product_option()->get_current_product_syncing_settings());
@@ -102,6 +137,8 @@ class LS_QBO_Sync
 
     public static function sync_triggered_by_lws()
     {
+        LS_QBO_Sync::lwsApiHasUpdates();
+
         $last_sync = LS_QBO()->options()->last_product_update();
         LSC_Log::add_dev_success('LS_QBO_Sync::sync_triggered_by_lws', 'Linksync triggered a sync.<br/> Last sync :' . $last_sync . '<br/> Current Server Time: ' . current_time('mysql'));
 
@@ -207,9 +244,11 @@ class LS_QBO_Sync
             $product_meta->update_tax_class('zero-rate');
         }
 
+        $quickbooks_option = LS_QBO()->options();
         $product_options = LS_QBO()->product_option();
         $current_sync_option = $product_options->get_current_product_syncing_settings();
         $isQuickBooksUsAccount = LS_QBO()->isUsAccount();
+        $isLaidVersion11 = LS_QBO()->isLaidVersion11();
 
         if ('two_way' == $current_sync_option['sync_type'] || 'qbo_to_woo' == $current_sync_option['sync_type']) {
             $product_type = $product->post->post_type;
@@ -320,27 +359,35 @@ class LS_QBO_Sync
                 $json_product->set_includes_tax($qbo_includes_tax);
 
                 $tax_id = ('' != $product_meta->get_tax_id()) ? $product_meta->get_tax_id() : null;
+                
                 if (!empty($qboTaxClassInfo['id']) && empty($tax_id)) {
                     $tax_id = $qboTaxClassInfo['id'];
                 }
-                $json_product->set_tax_id($tax_id);
 
                 $tax_name = ('' != $product_meta->get_tax_name()) ? $product_meta->get_tax_name() : null;
                 if (!empty($qboTaxClassInfo['name']) && empty($tax_name)) {
                     $tax_name = $qboTaxClassInfo['name'];
                 }
-                $json_product->set_tax_name($tax_name);
-
                 $tax_value = ('' != $product_meta->get_tax_value()) ? $product_meta->get_tax_value() : null;
                 if (!empty($qboTaxClassInfo['rateValue']) && empty($tax_value)) {
                     $tax_value = $qboTaxClassInfo['rateValue'];
                 }
-                $json_product->set_tax_value($tax_value);
 
                 $tax_rate = ('' != $product_meta->get_tax_rate()) ? $product_meta->get_tax_rate() : null;
                 if (!empty($qboTaxClassInfo['rateValue']) && empty($tax_rate)) {
                     $tax_rate = $qboTaxClassInfo['rateValue'];
                 }
+
+                if ($isLaidVersion11) {
+                    $temp_tax_id = $quickbooks_option->getTaxCodeIdByTaxRateId($tax_id);
+                    if (!empty($temp_tax_id)) {
+                        $tax_id = $temp_tax_id;
+                    }
+                }
+
+                $json_product->set_tax_id($tax_id);
+                $json_product->set_tax_name($tax_name);
+                $json_product->set_tax_value($tax_value);
                 $json_product->set_tax_rate($tax_rate);
 
 
@@ -365,10 +412,22 @@ class LS_QBO_Sync
                     $product_meta->update_product_type($product->get_product_type());
                     $product_meta->update_cost_price($product->get_cost_price());
 
+                    delete_post_meta($product_id, '_ls_json_product_error');
 
                     LSC_Log::add_dev_success('LS_QBO_Sync::import_single_product_to_qbo', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
 
                 } else {
+                    update_post_meta($product_id, '_ls_json_product_error', $result);
+                    if(!empty($result['userMessage']) &&  'Duplicate Name Exists Error' == $result['userMessage']){
+                        $productPost = array();
+                        $productPost['ID'] = $product_id;
+                        $productPost['post_status'] = 'private';
+
+                        self::remove_action_save_post();
+                        wp_update_post($productPost);
+                        self::add_action_save_post();
+                    }
+
                     LSC_Log::add_dev_failed('LS_QBO_Sync::import_single_product_to_qbo', 'Product ID: ' . $product_id . '<br/><br/>Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
                 }
             }
@@ -502,6 +561,11 @@ class LS_QBO_Sync
 
                 //Woocommerce line tax
                 $taxValue = $orderLineItem->lineItem['line_tax'];
+
+                $temp_tax_id = LS_QBO()->options()->getTaxCodeIdByTaxRateId($taxId);
+                if(LS_QBO()->isLaidVersion11() && !empty($temp_tax_id)){
+                    $taxId = $temp_tax_id;
+                }
                 $products[] = array(
                     'id' => get_qbo_id($product_meta->get_product_id()),
                     'sku' => $pro_object->get_sku(),
@@ -721,6 +785,14 @@ class LS_QBO_Sync
         $json_order->set_products($products);
         $json_order->set_billingAddress($billing_address);
         $json_order->set_deliveryAddress($delivery_address);
+
+        if('on' == $order_option->location_status()){
+            $json_order->set_location_id($order_option->selected_location());
+        }
+
+        if('on' == $order_option->class_status()){
+            $json_order->set_class_id($order_option->selected_order_class());
+        }
 
 
         $order_json_data = $json_order->get_json_orders();
@@ -991,9 +1063,10 @@ class LS_QBO_Sync
     {
 
         $page = isset($_POST['page']) ? $_POST['page'] : 1;
+        $last_sync = LS_QBO()->options()->last_product_update();
         $products = LS_QBO()->api()->product()->get_product(array(
             'page' => $page,
-            'since' => get_last_sync()
+            'since' => $last_sync
         ));
 
         wp_send_json($products);

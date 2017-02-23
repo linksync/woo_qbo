@@ -41,7 +41,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function qbo_install()
         {
             $accounts = new LS_QBO_Account();
-            $accounts->createTable();
+            //$accounts->createTable();
         }
 
         /**
@@ -50,7 +50,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function qbo_plugin_loaded()
         {
             $accounts = new LS_QBO_Account();
-            $accounts->tableUpgrade();
+            //$accounts->tableUpgrade();
 
         }
 
@@ -86,6 +86,18 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     LS_QBO()->show_errors($errors);
                 }
             }
+
+        }
+
+        public function isLaidVersion11()
+        {
+            $currentLaidInfo = LS_QBO()->get_laid_info();
+
+            if (!empty($currentLaidInfo['app_version']) && '1.1' == $currentLaidInfo['app_version']) {
+                return true;
+            }
+
+            return false;
 
         }
 
@@ -221,7 +233,8 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             LS_QBO()->options()->updateAssetAccounts($qbo_api->get_assets_accounts());
             LS_QBO()->options()->updateExpeseAccounts($qbo_api->get_expense_accounts());
             LS_QBO()->options()->updateIncomeAccounts($qbo_api->get_income_accounts());
-            LS_QBO()->options()->updateQuickBooksTaxClasses($qbo_api->get_all_tax_rate());
+            $taxDataToBeUsed = LS_Woo_Tax::getQuickBookTaxDataToBeUsed();
+            LS_QBO()->options()->updateQuickBooksTaxClasses($taxDataToBeUsed);
             LS_QBO()->options()->updateQuickBooksDuplicateProducts($qbo_api->product()->get_duplicate_products());
 
             LS_QBO()->set_quantity_option_base_on_qboinfo($qbo_info);
@@ -241,7 +254,9 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             LS_QBO()->options()->update_deposit_accounts($deposit_accounts);
             LS_QBO()->options()->updateQuickBooksLocationList($qbo_api->get_all_active_location());
             LS_QBO()->options()->updateQuickBooksClasses($qbo_classes);
-            LS_QBO()->options()->updateQuickBooksTaxClasses($qbo_api->get_all_tax_rate());
+
+            $taxDataToBeUsed = LS_Woo_Tax::getQuickBookTaxDataToBeUsed();
+            LS_QBO()->options()->updateQuickBooksTaxClasses($taxDataToBeUsed);
             LS_QBO()->options()->updateQuickBooksPaymentMethods($qbo_api->get_all_payment_methods());
             LS_QBO()->options()->updateQuickBooksInfo($qbo_info);
             LS_QBO()->set_quantity_option_base_on_qboinfo($qbo_info);

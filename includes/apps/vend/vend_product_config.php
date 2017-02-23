@@ -219,7 +219,7 @@ if (isset($_POST['save_product_sync_setting'])) {
         if (isset($_POST['ps_imp_by_tag'])) {
             if ($_POST['ps_imp_by_tag'] == 'on') {
                 if (isset($_POST['import_by_tags_list']) && !empty($_POST['import_by_tags_list'])) {
-                    $selected_tags = array();
+					$selected_tags = array();
 					foreach( $_POST['import_by_tags_list'] as $key => $selected_tab ){
 						$selected_tags[] = remove_escaping_str($selected_tab);
 					}
@@ -316,6 +316,9 @@ if (isset($_POST['save_product_sync_setting'])) {
         LSC_Log::add('Product Sync Setting', 'success', $setting_message, $LAIDKey);
     }
     update_option('image_process', 'complete');
+    if (is_vend()) {
+        LS_Vend()->updateWebhookConnection();
+    }
 } elseif (isset($_POST['sync_reset_btn'])) {
     update_option('prod_update_suc', NULL);
     update_option('prod_last_page', NULL);
@@ -1318,7 +1321,7 @@ update_option('prod_last_page', NULL);
             url: '../wp-content/plugins/linksync/image_uploader.php',
             success:function(data){
 
-              if( data ){
+				if( data ){
 					var result=data.response;
 					if( result && result.image ){
 						if(result.image=='on'){
