@@ -352,6 +352,11 @@ class LS_QBO_Sync
 
                 if ($isQuickBooksUsAccount) {
                     $taxable = ('none' == $product_meta->get_tax_status()) ? 'false' : 'true';
+                    if ('product_variation' == $product->post->post_type && !empty($product->post->post_parent)) {
+                        $parent_product_meta = new LS_Product_Meta($product->post->post_parent);
+                        $taxable = ('none' == $parent_product_meta->get_tax_status()) ? 'false' : 'true';
+                    }
+
                     $json_product->set_taxable($taxable);
                 }
 
@@ -359,7 +364,7 @@ class LS_QBO_Sync
                 $json_product->set_includes_tax($qbo_includes_tax);
 
                 $tax_id = ('' != $product_meta->get_tax_id()) ? $product_meta->get_tax_id() : null;
-                
+
                 if (!empty($qboTaxClassInfo['id']) && empty($tax_id)) {
                     $tax_id = $qboTaxClassInfo['id'];
                 }
@@ -402,6 +407,7 @@ class LS_QBO_Sync
                     $product_meta->update_tax_name($product->get_tax_name());
                     $product_meta->update_tax_rate($product->get_tax_rate());
                     $product_meta->update_tax_value($product->get_tax_value());
+                    $product_meta->update_taxable($product->get_taxable());
 
                     $qbo_tax_includes_tax = (false === $product->does_includes_tax()) ? 'false' : 'true';
                     $product_meta->update_qbo_includes_tax($qbo_tax_includes_tax);
@@ -681,15 +687,20 @@ class LS_QBO_Sync
                 $qbo_tax[3] = null;
             }
 
+            $shippingQboTaxId = ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null;
+
+            $temp_shipping_tax_id = LS_QBO()->options()->getTaxCodeIdByTaxRateId($shippingQboTaxId);
+            if (LS_QBO()->isLaidVersion11() && !empty($temp_shipping_tax_id)) {
+                $shippingQboTaxId = $temp_shipping_tax_id;
+            }
 
             if ($isQuickBooksUsAccount && !empty($shipping_tax)) {
-
 
                 $shippingProductWithTax = array(
                     "price" => isset($shipping_cost) ? $shipping_cost : null,
                     "quantity" => 1,
                     'tax_name' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
-                    'tax_id' => ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null,
+                    'tax_id' => $shippingQboTaxId,
                     'tax_rate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
                     'tax_value' => $shipping_tax
                 );
@@ -706,7 +717,7 @@ class LS_QBO_Sync
                     "quantity" => 1,
                     "sku" => "shipping",
                     'taxName' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
-                    'taxId' => ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null,
+                    'taxId' => $shippingQboTaxId,
                     'taxRate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
                     'taxValue' => $shipping_tax
                 );

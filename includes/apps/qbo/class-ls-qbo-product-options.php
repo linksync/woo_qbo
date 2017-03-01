@@ -134,7 +134,7 @@ class LS_QBO_Product_Option{
 	 * @return string
 	 */
 	public function use_woo_tax_option(){
-		return get_option( 'ls_psqbo_use_woo_tax_option', 'on');
+		return get_option( 'ls_psqbo_use_woo_tax_option', 'off');
 	}
 
 	/**

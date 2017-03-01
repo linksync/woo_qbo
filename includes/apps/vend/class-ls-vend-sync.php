@@ -9,7 +9,7 @@ class LS_Vend_Sync
         self::$orderSyncOption = LS_Vend()->order_option();
 
         if (self::$orderSyncOption->woocommerceToVend() == self::$orderSyncOption->sync_type()) {
-            add_action(LS_Vend()->orderSyncToVendHookName(), array('LS_Vend_Sync', 'importOrderToVend'));
+            add_action(LS_Vend()->orderSyncToVendHookName(), array('LS_Vend_Sync', 'importOrderToVend'), 1);
             add_action('woocommerce_process_shop_order_meta', array('LS_Vend_Sync', 'importOrderToVend'));
         }
 
@@ -204,6 +204,21 @@ class LS_Vend_Sync
                 'country' => $filtered_shipping_address['country'],
                 'company' => $filtered_shipping_address['company']
             );
+
+            $orderOption = LS_Vend()->order_option();
+            $useBillingToBePhysicalOption = $orderOption->useBillingAddressToBePhysicalAddress();
+            $orderBillingAddress = $billing_address;
+            $orderShippingAddress = $delivery_address;
+
+            if('yes' == $useBillingToBePhysicalOption){
+                $delivery_address = $orderBillingAddress;
+            }
+
+            $useShippingToBePostalOption = $orderOption->useShippingAddressToBePostalAddress();
+            if('yes' == $useShippingToBePostalOption){
+                $billing_address = $orderShippingAddress;
+            }
+
             $primaryEmail = !empty($primary_email_address) ? $primary_email_address : $billing_address['email_address'];
             unset($billing_address['email_address']);
 

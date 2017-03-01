@@ -99,7 +99,7 @@ class LS_QBO_Order_Form
 
         ?>
         <fieldset id="qbo-order-configuration">
-            <legend>Product Syncing Type</legend>
+            <legend>Order Syncing Type</legend>
             <p>
 
                 <input <?php echo ($option == $this->sync_types[0]) ? 'checked' : ''; ?>
@@ -605,7 +605,8 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
 
 
         $users_order_option = $order_options->get_current_order_syncing_settings();
-        $hide_on_disabled = ($users_order_option['sync_type'] == $order_options->get_all_sync_type()[1]) ? 'style="display: none;"' : '';
+        $orderSyncType = $order_options->get_all_sync_type();
+        $hide_on_disabled = ($users_order_option['sync_type'] == $orderSyncType[1]) ? 'style="display: none;"' : '';
 
         $users_order_option['deposit_accounts'] = LS_QBO()->options()->get_deposit_accounts();
         $users_order_option['location_list'] = LS_QBO()->options()->getQuickBooksLocationList();

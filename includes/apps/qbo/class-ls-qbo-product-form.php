@@ -948,7 +948,7 @@ class LS_QBO_Product_Form
                 Product Status
                 <?php
                 help_link(array(
-                    'title' => 'Enable this option if you want newly created product in WooCommerce to be set to \'Pending Review\', so that you can review and update new products before they are published in your WooCommerce store.'
+                    'title' => 'Enable this option if you want the newly created products in QuickBooks to be synced to WooCommerce shall be set to \'Pending Review\'.'
                 ));
                 ?>
             </th>
