@@ -84,7 +84,20 @@ class LS_Woo_Product
             }
 
             if ('on' == $productSyncingDescriptionOption) {
-                $product_args['post_content'] = $product->get_description();
+
+                $temporaryProductDescription = $product_meta->get_woo_product_description();
+                /**
+                 * If temporary product description storage is empty it means that the user did not try to save
+                 * more than 4000 character of product description then override woocommerce product description is logical
+                 */
+                if (!empty($temporaryProductDescription)) {
+                    if ('product_variation' == $woocommerceProduct->post_type) {
+                        $product_meta->update_variation_description($product->get_description());
+                    } elseif ('product' == $woocommerceProduct->post_type) {
+                        $product_args['post_content'] = html_entity_decode($product->get_description());
+                    }
+                }
+
             }
 
             if ('on' == $productSyncingPriceOption) {
@@ -130,8 +143,16 @@ class LS_Woo_Product
                 if ('on' == $productSyncingChangeStatusBaseOnQuantity) {
                     //Change product status base on quantity is on
                     $product_args['post_status'] = 'publish';
+                    $product_meta->set_manage_stock('yes');
+
                     if ($product->get_quantity() <= 0 && LS_QBO_ItemType::INVENTORY == $productType) {
-                        $product_args['post_status'] = 'draft';
+                        $product_meta->set_stock_status('outofstock');
+                        if ('product' == $woocommerceProduct->post_type) {
+                            $product_args['post_status'] = 'draft';
+                        }
+
+                    } elseif ($product->get_quantity() > 0 && LS_QBO_ItemType::INVENTORY == $productType) {
+                        $product_meta->set_stock_status('instock');
                     }
 
                 }

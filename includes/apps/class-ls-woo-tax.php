@@ -8,10 +8,7 @@ class LS_Woo_Tax{
         if (!empty($orderTax)) {
             foreach ($orderTax as $tax_label) {
                 $tax_line_item = new LS_Woo_Order_Line_Item($tax_label);
-                $tax_info = LS_Woo_Tax::get_tax_rate_by_name_and_class(
-                    $tax_line_item->get_tax_name(),
-                    $taxClass
-                );
+                $tax_info = LS_Woo_Tax::get_tax_rate_by_rate_id($tax_line_item->lineItem['rate_id']);
 
                 if (isset($tax_info['tax_rate_id']) && isset($tax_info['tax_rate_class'])) {
                     $wc_tax_class = ('' == $tax_info['tax_rate_class']) ? 'standard' : $tax_info['tax_rate_class'];

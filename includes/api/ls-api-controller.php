@@ -113,8 +113,6 @@ class LS_ApiController{
 					'linksync_connectionwith' => $connected_with
 				));
 
-				LS_ApiController::update_webhook_connection();
-
 			} else if ('Vend' == $connected_to || 'Vend' == $connected_with) {
 				$laid_connection['connected_to'] = 'Vend';
 				linksync::checkForConnection($laid_key);

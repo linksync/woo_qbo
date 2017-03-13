@@ -33,9 +33,13 @@ if (isset($_REQUEST['page'], $_REQUEST['setting']) && $_REQUEST['page'] == 'link
 } else {
      $configuration_tab = 'nav-tab-active';
 }
-?> 
-<h2>Linksync</h2>
-<?php  
+?>
+<h2>Linksync (Version: <?php echo linksync::$version; ?>)</h2>
+<?php
+
+if (is_qbo()) {
+    LS_QBO()->updateWebhookConnection();
+}
 
 $file_perms = wp_is_writable(plugin_dir_path(__FILE__)); 
 

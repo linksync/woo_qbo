@@ -26,6 +26,14 @@ class LS_QBO_Api{
 		return $this->order;
 	}
 
+
+	public function save_users_settings( $user_settings )
+	{
+		$savedUserSettings = $this->api->post('config', $user_settings);
+
+		return $savedUserSettings;
+	}
+
 	/**
 	 * QuickBooks Online Tax
 	 * Returns all active tax rates for the current retailer

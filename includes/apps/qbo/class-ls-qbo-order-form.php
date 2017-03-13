@@ -743,6 +743,8 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
             $order_option->update_selected_order_class($user_options['qbo_class']);
         }
 
+        LS_QBO()->updateWebhookConnection();
+        LS_QBO()->saveUserSettingsToLws();
 
     }
 

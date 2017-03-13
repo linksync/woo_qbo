@@ -221,6 +221,21 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             return $found;
         }
 
+        public function saveUserSettingsToLws(){
+            $product_options = LS_QBO()->product_option();
+            $order_options = LS_QBO()->order_option();
+
+            $qboApi = LS_QBO()->api();
+            $productOptions = $product_options->get_current_product_syncing_settings();
+            $orderOptions = $order_options->get_current_order_syncing_settings();
+
+            
+            $userSettings['product_settings'] = $productOptions;
+            $userSettings['order_settings'] = $orderOptions;
+            $userSettings = json_encode($userSettings);
+            $qboApi->save_users_settings($userSettings);
+        }
+
         public function save_needed_ps_data_from_qbo()
         {
             $qbo_api = LS_QBO()->api();
@@ -658,6 +673,36 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             }
 
             return false;
+        }
+
+        public function updateWebhookConnection()
+        {
+            $laid = LS_ApiController::get_current_laid();
+
+            $webHookData['url'] = linksync::getWebHookUrl();
+            $webHookData['version'] = linksync::$version;
+
+
+            $orderImport = 'no';
+            $webHookData['order_import'] = $orderImport;
+
+            $productSyncType = LS_QBO()->product_option()->sync_type();
+            $productImport = 'no';
+            if ('two_way' == $productSyncType || 'qbo_to_woo' == $productSyncType) {
+                $productImport = 'yes';
+            }
+
+            $webHookData['product_import'] = $productImport;
+            $webHook = LS_ApiController::update_webhook_connection($webHookData);
+
+            if(!empty($webHook['result']) && $webHook['result'] == 'success'){
+                LSC_Log::add('WebHookConnection', 'success', 'Connected to a file ' . $webHookData['url'], $laid);
+                update_option('linksync_addedfile', '<a href="' . $webHookData['url'] . '">' . $webHookData['url'] . '</a>');
+
+            } else {
+                LSC_Log::add('WebHookConnection', 'fail', 'Order-Config File: Connected to a file ' . $webHookData['url'], $laid);
+            }
+            return $webHook;
         }
 
     }

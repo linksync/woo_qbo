@@ -774,6 +774,17 @@ class LS_Product_Meta
         return $this->update_meta('_tax_class', $meta_value);
     }
 
+    public function update_woo_product_description($product_description)
+    {
+        return $this->update_meta('_ls_product_description', $product_description);
+    }
+
+    public function get_woo_product_description()
+    {
+        return $this->get_meta('_ls_product_description');
+    }
+
+
     public function get_metas()
     {
         return $this->metas;

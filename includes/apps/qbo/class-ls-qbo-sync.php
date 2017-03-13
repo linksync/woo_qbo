@@ -262,10 +262,40 @@ class LS_QBO_Sync
                     $json_product->set_id(get_qbo_id($qbo_product_id));
                 }
 
-                $json_product->set_name($product->get_title());
+                $productName = $product->get_title();
+                $productNameLength = strlen($productName);
+                $truncated100CharProductName = mb_substr($productName, 0, 100);
+                $json_product->set_name($truncated100CharProductName);
+                /**
+                 * Override product name/title if it has more than 100 character because
+                 * QuickBooks has 100 limit documented here https://developer.intuit.com/docs/api/accounting/item
+                 */
+                if ($productNameLength > 100) {
+                    $productPost = array();
+                    $productPost['ID'] = $product_id;
+                    $productPost['post_title'] = $productName;
+
+                    self::remove_action_save_post();
+                    wp_update_post($productPost);
+                    self::add_action_save_post();
+                }
 
                 if ('on' == $product_options->description()) {
-                    $json_product->set_description($product->post->post_content);
+                    $productDescription = $product->post->post_content;
+                    if ('product_variation' == $product->post->post_type) {
+                        $productDescription = $product_meta->get_variation_description();
+                    }
+                    $productDescription = htmlentities($productDescription, ENT_QUOTES);
+                    $productDescriptionCount = strlen($productDescription);
+                    if ($productDescriptionCount > 4000) {
+                        //QuickBooks limit is 4000 character so will save woocommerce product content to a temporary location
+                        $product_meta->update_woo_product_description($productDescription);
+                    } elseif ($productDescriptionCount <= 4000) {
+                        //Empty this temporary holder for product description
+                        $product_meta->update_woo_product_description('');
+                    }
+
+                    $json_product->set_description($productDescription);
                 }
 
                 if ('on' == $product_options->price()) {
@@ -331,6 +361,19 @@ class LS_QBO_Sync
                     $product_meta->update_sku($sku);
                 }
                 $json_product->set_sku($sku);
+
+                $skuLength = strlen($sku);
+                /**
+                 * Override product name/title if it has more that 100 character because
+                 * QuickBooks has 100 limit documented here https://developer.intuit.com/docs/api/accounting/item
+                 */
+                if($skuLength > 100){
+                    $truncated100CharSku = mb_substr($sku, 0, 100);
+                    $json_product->set_sku($truncated100CharSku);
+                    $product_meta->update_sku($truncated100CharSku);
+                }
+
+
                 $json_product->set_active(1);
 
                 $income_account_id = ('' != $product_meta->get_income_account_id()) ? $product_meta->get_income_account_id() : $product_options->income_account();
@@ -349,16 +392,6 @@ class LS_QBO_Sync
 
                 $wooTaxClass = ('' == $product_meta->get_tax_class()) ? 'standard' : $product_meta->get_tax_class();
                 $qboTaxClassInfo = LS_Woo_Tax::getQuickBooksTaxInfoByWooTaxKey($wooTaxClass);
-
-                if ($isQuickBooksUsAccount) {
-                    $taxable = ('none' == $product_meta->get_tax_status()) ? 'false' : 'true';
-                    if ('product_variation' == $product->post->post_type && !empty($product->post->post_parent)) {
-                        $parent_product_meta = new LS_Product_Meta($product->post->post_parent);
-                        $taxable = ('none' == $parent_product_meta->get_tax_status()) ? 'false' : 'true';
-                    }
-
-                    $json_product->set_taxable($taxable);
-                }
 
                 $qbo_includes_tax = ('false' === $product_meta->get_qbo_includes_tax()) ? false : true;
                 $json_product->set_includes_tax($qbo_includes_tax);
@@ -390,11 +423,25 @@ class LS_QBO_Sync
                     }
                 }
 
+                $taxable = ('none' == $product_meta->get_tax_status()) ? 'false' : 'true';
+                if ('product_variation' == $product->post->post_type && !empty($product->post->post_parent)) {
+                    $parent_product_meta = new LS_Product_Meta($product->post->post_parent);
+                    $taxable = ('none' == $parent_product_meta->get_tax_status()) ? 'false' : 'true';
+                }
+
+                if ($isQuickBooksUsAccount) {
+                    $json_product->set_taxable($taxable);
+                } elseif (!$isQuickBooksUsAccount && 'false' == $taxable) {
+                    $tax_id = null;
+                    $tax_name = null;
+                    $tax_value = null;
+                    $tax_rate = null;
+                }
+
                 $json_product->set_tax_id($tax_id);
                 $json_product->set_tax_name($tax_name);
                 $json_product->set_tax_value($tax_value);
                 $json_product->set_tax_rate($tax_rate);
-
 
                 $j_product = $json_product->get_json_product();
                 $result = LS_QBO()->api()->product()->save_product($j_product);
@@ -521,14 +568,13 @@ class LS_QBO_Sync
                 $taxName = ('' == $product_meta->get_tax_name()) ? null : $product_meta->get_tax_name();
                 $taxId = ('' == $product_meta->get_tax_id()) ? null : $product_meta->get_tax_id();
                 $taxRate = ('' == $product_meta->get_tax_rate()) ? null : $product_meta->get_tax_rate();
-                $taxValue = ('' == $product_meta->get_tax_value()) ? null : $product_meta->get_tax_value();
+
                 if ('' != $qbo_tax) {
                     $taxName = (isset($qbo_tax[1])) ? $qbo_tax[1] : $taxName;
                     $taxId = (isset($qbo_tax[0])) ? $qbo_tax[0] : $taxId;
                     $taxRate = (isset($qbo_tax[3])) ? $qbo_tax[3] : $taxRate;
                 }
 
-                $qboTaxName = $product_meta->get_tax_name();
                 $productTaxStatus = $product_meta->get_tax_status();
                 if (isset($parentVariant)) {
                     $productTaxStatus = $parentVariant->get_tax_status();
@@ -542,7 +588,6 @@ class LS_QBO_Sync
                         $taxId = $qboTaxClassInfo['id'];
                         $taxName = $qboTaxClassInfo['name'];
                         $taxRate = isset($qboTaxClassInfo['rateValue']) ? $qboTaxClassInfo['rateValue'] : null;
-                        $taxValue = isset($qboTaxClassInfo['rateValue']) ? $qboTaxClassInfo['rateValue'] : null;
                     }
                 }
 
@@ -557,7 +602,7 @@ class LS_QBO_Sync
                     }
                 }
 
-                if ('none' == $productTaxStatus && empty($taxId)) {
+                if (empty($orderLineItem->lineItem['line_tax']) || ('none' == $productTaxStatus && empty($taxId))) {
                     $taxName = null;
                     $taxId = null;
                     $taxRate = null;
@@ -570,8 +615,17 @@ class LS_QBO_Sync
 
                 $temp_tax_id = LS_QBO()->options()->getTaxCodeIdByTaxRateId($taxId);
                 if(LS_QBO()->isLaidVersion11() && !empty($temp_tax_id)){
-                    $taxId = $temp_tax_id;
+                    //$taxId = $temp_tax_id;
                 }
+
+                //If there is no tax setup on this line item then tax details to null
+                if(empty($orderLineItem->lineItem['line_tax'])){
+                    $taxName = null;
+                    $taxId = null;
+                    $taxRate = null;
+                    $taxValue = null;
+                }
+
                 $products[] = array(
                     'id' => get_qbo_id($product_meta->get_product_id()),
                     'sku' => $pro_object->get_sku(),
@@ -593,7 +647,7 @@ class LS_QBO_Sync
         }
 
         //set the total order discount to send
-        if (0 !== $total_discount) {
+        if (!empty($total_discount)) {
             $products[] = array(
                 'title' => 'discount',
                 'price' => $total_discount,
@@ -660,7 +714,6 @@ class LS_QBO_Sync
                 'company' => $filtered_shipping_address['company']
             );
             $primary_email = !empty($primary_email_address) ? $primary_email_address : $billing_address['email_address'];
-            unset($billing_address['email_address']);
         }
 
         //UTC Time
@@ -691,36 +744,25 @@ class LS_QBO_Sync
 
             $temp_shipping_tax_id = LS_QBO()->options()->getTaxCodeIdByTaxRateId($shippingQboTaxId);
             if (LS_QBO()->isLaidVersion11() && !empty($temp_shipping_tax_id)) {
-                $shippingQboTaxId = $temp_shipping_tax_id;
+                //$shippingQboTaxId = $temp_shipping_tax_id;
             }
 
+            $shippingProductLineItem = array(
+                "price" => isset($shipping_cost) ? $shipping_cost : null,
+                "quantity" => 1,
+                "sku" => "shipping",
+                'tax_name' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
+                'tax_id' => $shippingQboTaxId,
+                'tax_rate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
+                'tax_value' => $shipping_tax
+            );
+
             if ($isQuickBooksUsAccount && !empty($shipping_tax)) {
+                $shippingProductLineItem = LS_Woo_Product::createQboShippingTaxProduct($shippingProductLineItem);
+            }
 
-                $shippingProductWithTax = array(
-                    "price" => isset($shipping_cost) ? $shipping_cost : null,
-                    "quantity" => 1,
-                    'tax_name' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
-                    'tax_id' => $shippingQboTaxId,
-                    'tax_rate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
-                    'tax_value' => $shipping_tax
-                );
-                $shippingProductLineItem = LS_Woo_Product::createQboShippingTaxProduct($shippingProductWithTax);
-
-
-                if (!empty($shippingProductLineItem)) {
-                    $products[] = $shippingProductLineItem;
-                }
-
-            } else {
-                $products[] = array(
-                    "price" => isset($shipping_cost) ? $shipping_cost : null,
-                    "quantity" => 1,
-                    "sku" => "shipping",
-                    'taxName' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
-                    'taxId' => $shippingQboTaxId,
-                    'taxRate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
-                    'taxValue' => $shipping_tax
-                );
+            if (!empty($shippingProductLineItem)) {
+                $products[] = $shippingProductLineItem;
             }
         }
 
@@ -856,6 +898,7 @@ class LS_QBO_Sync
 
         if ('two_way' == $current_sync_option['sync_type']) {
             remove_action('save_post', array('LS_QBO_Sync', 'save_product'), 999);
+            remove_action('woocommerce_save_product_variation', array('LS_QBO_Sync', 'import_single_product_to_qbo'), 999);
         }
     }
 
@@ -866,6 +909,7 @@ class LS_QBO_Sync
 
         if ('two_way' == $current_sync_option['sync_type']) {
             add_action('save_post', array('LS_QBO_Sync', 'save_product'), 999, 3);
+            add_action('woocommerce_save_product_variation', array('LS_QBO_Sync', 'import_single_product_to_qbo'), 999, 1);
         }
     }
 
@@ -927,8 +971,16 @@ class LS_QBO_Sync
             //return if sync type is disabled
             return;
         }
-        if ('shipping_with_tax' == $product->get_sku() || 'shipping' == $product->get_sku()) {
-            //Do not create this product in woocommerce if the sku is either shipping_with_tax or shipping
+        if('shipping_with_tax' == $product->get_sku()){
+            //Save or update the details to qbo shipping product to the wordpress option to use it later
+            LS_QBO()->options()->updateShippingProductWithTax(json_encode($product->product));
+
+            //Do not create this product in woocommerce if the sku is shipping_with_tax
+            return;
+        }
+
+        if ('shipping' == $product->get_sku()) {
+            //Do not create this product in woocommerce if the sku is shipping
             return;
         }
 
@@ -997,7 +1049,7 @@ class LS_QBO_Sync
                     $product_description = $product->get_description();
                     //Create the product array
                     $product_args['post_title'] = $product->get_name();
-                    $product_args['post_content'] = empty($product_description) ? '&nbsp' : $product_description;
+                    $product_args['post_content'] = empty($product_description) ? '&nbsp' : html_entity_decode($product_description);
 
                     $product_id = LS_Woo_Product::create($product_args, true);
                 }
