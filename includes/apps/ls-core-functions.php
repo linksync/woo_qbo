@@ -689,3 +689,15 @@ if (!function_exists('array_udiff_custom_compare_product_id')) {
         return $a['ID'] - $b['ID'];
     }
 }
+
+if (!function_exists('ls_is_odd')) {
+
+    function ls_is_odd($number)
+    {
+        if (($number % 2) == 1) {
+            return true;
+        }
+
+        return false;
+    }
+}

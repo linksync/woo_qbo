@@ -213,3 +213,32 @@ label {
 .big-error-message p{
     font-size: 30px;
 }
+
+#toogle_description_error{
+    cursor: pointer !important;
+}
+
+.toggle-indicator-up:before{
+    content: "\f142";
+    display: inline-block;
+    font: normal 20px/1 dashicons;
+    speak: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-decoration: none !important;
+}
+
+
+.toggle-indicator-down:before{
+    content: "\f140";
+    display: inline-block;
+    font: normal 20px/1 dashicons;
+    speak: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-decoration: none !important;
+}
+
+.font-size-14{
+    font-size: 14px;
+}

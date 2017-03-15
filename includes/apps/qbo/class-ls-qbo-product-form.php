@@ -60,6 +60,8 @@ class LS_QBO_Product_Form
         $product_syncing->accounts_error_message();
         $product_syncing->require_syncing_error_message();
 
+        do_action('before_product_syncing_options');
+
         if (!empty($accounts_error)) {
             $show_hide_pop_up = 'none';
         }
@@ -152,6 +154,7 @@ class LS_QBO_Product_Form
 
         echo '</form>';
 
+        do_action('after_product_syncing_options');
         die();
     }
 

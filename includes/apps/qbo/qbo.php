@@ -436,6 +436,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
 
             include_once LS_INC_DIR . 'apps/qbo/class-ls-qbo-product-form.php';
+            include_once LS_INC_DIR . 'apps/qbo/class-ls-description-handler.php';
             include_once LS_INC_DIR . 'apps/qbo/class-ls-qbo-order-form.php';
 
             include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
@@ -446,6 +447,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/class-ls-json-order-factory.php';
 
             include_once LS_INC_DIR . 'apps/class-ls-notice-message-builder.php';
+
             if (is_qbo()) {
                 include_once LS_INC_DIR . 'apps/qbo/class-ls-qbo-sync.php';
                 include_once LS_INC_DIR . 'apps/class-ls-notice.php';

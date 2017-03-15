@@ -2,6 +2,25 @@
 
 class LS_Woo_Product
 {
+    public static function getProductsOver4000LengthDescription()
+    {
+        global $wpdb;
+
+        $simpleProductsSql = "SELECT * FROM $wpdb->posts WHERE CHAR_LENGTH(post_content) > 4000 AND post_type = 'product' ";
+        $simpleProductsSqlResult = $wpdb->get_results($simpleProductsSql, ARRAY_A);
+
+        $variantProductSql = "SELECT ".$wpdb->posts.".* FROM $wpdb->posts 
+                                INNER JOIN wp_postmeta ON wp_postmeta.post_id = wp_posts.ID 
+                                WHERE 
+                                    wp_posts.post_type = 'product_variation' AND 
+                                    wp_postmeta.meta_key = '_variation_description' AND 
+                                    CHAR_LENGTH(wp_postmeta.meta_value)> 4000 ";
+
+        $variantProductSqlResult = $wpdb->get_results($variantProductSql, ARRAY_A);
+        $productOver400LengthDescription = array_merge($simpleProductsSqlResult, $variantProductSqlResult);
+
+        return $productOver400LengthDescription;
+    }
 
     public static function update_woo_product_using_qbo_product(
         $current_sync_option,
@@ -80,7 +99,7 @@ class LS_Woo_Product
             }
 
             if ('on' == $productSyncingTitleOrNameOption) {
-                $product_args['post_title'] = $product->get_name();
+                $product_args['post_title'] = html_entity_decode($product->get_name());
             }
 
             if ('on' == $productSyncingDescriptionOption) {
@@ -90,9 +109,9 @@ class LS_Woo_Product
                  * If temporary product description storage is empty it means that the user did not try to save
                  * more than 4000 character of product description then override woocommerce product description is logical
                  */
-                if (!empty($temporaryProductDescription)) {
+                if (empty($temporaryProductDescription)) {
                     if ('product_variation' == $woocommerceProduct->post_type) {
-                        $product_meta->update_variation_description($product->get_description());
+                        $product_meta->update_variation_description(html_entity_decode($product->get_description()));
                     } elseif ('product' == $woocommerceProduct->post_type) {
                         $product_args['post_content'] = html_entity_decode($product->get_description());
                     }
@@ -143,7 +162,6 @@ class LS_Woo_Product
                 if ('on' == $productSyncingChangeStatusBaseOnQuantity) {
                     //Change product status base on quantity is on
                     $product_args['post_status'] = 'publish';
-                    $product_meta->set_manage_stock('yes');
 
                     if ($product->get_quantity() <= 0 && LS_QBO_ItemType::INVENTORY == $productType) {
                         $product_meta->set_stock_status('outofstock');
@@ -156,7 +174,10 @@ class LS_Woo_Product
                     }
 
                 }
-                if(true == $is_new && $isQuickBooksPlus){
+                if (
+                    (true == $is_new && $isQuickBooksPlus) ||
+                    LS_QBO_ItemType::INVENTORY == $productType
+                ) {
                     $product_meta->set_manage_stock('yes');
                 }
 

@@ -19,6 +19,34 @@
         var ls_wrapper              =   $('#ls-wrapper');
         var main_view_container     =   $( '#ls-main-views-cont' );
 
+        ls_wrapper.on('change', 'input[name*="checkbox_toogle_description"]:checkbox', function () {
+
+            $tblDescriptionBody = $('#tbl_description_error_body');
+            $toggleIndicator = $('#ls-toggle-indicator');
+
+            if( $(this).prop('checked') == false ){
+                $showDescriptionError = 'false';
+                $toggleIndicator.addClass('toggle-indicator-down');
+                $toggleIndicator.removeClass('toggle-indicator-up');
+
+            }else{
+                $showDescriptionError = 'true';
+                $toggleIndicator.addClass('toggle-indicator-up');
+                $toggleIndicator.removeClass('toggle-indicator-down');
+
+            }
+
+            $tblDescriptionBody.toggle()
+            var $data = {
+                'action'            :   'qbo_description_toggle',
+                'show_description'  :   $showDescriptionError
+            }
+            console.log($data);
+            post_data($data, function (response) {
+                console.log(response);
+            })
+        });
+
         /**
          * On saving product syncing settings
          */

@@ -265,6 +265,7 @@ class LS_QBO_Sync
                 $productName = $product->get_title();
                 $productNameLength = strlen($productName);
                 $truncated100CharProductName = mb_substr($productName, 0, 100);
+                $truncated100CharProductName =  htmlentities($truncated100CharProductName, ENT_QUOTES);
                 $json_product->set_name($truncated100CharProductName);
                 /**
                  * Override product name/title if it has more than 100 character because
@@ -290,6 +291,8 @@ class LS_QBO_Sync
                     if ($productDescriptionCount > 4000) {
                         //QuickBooks limit is 4000 character so will save woocommerce product content to a temporary location
                         $product_meta->update_woo_product_description($productDescription);
+
+                        $productDescription = mb_substr($productDescription, 0, 4000);
                     } elseif ($productDescriptionCount <= 4000) {
                         //Empty this temporary holder for product description
                         $product_meta->update_woo_product_description('');
@@ -368,7 +371,8 @@ class LS_QBO_Sync
                  * QuickBooks has 100 limit documented here https://developer.intuit.com/docs/api/accounting/item
                  */
                 if($skuLength > 100){
-                    $truncated100CharSku = mb_substr($sku, 0, 100);
+                    $truncated100CharSku = htmlentities($sku, ENT_QUOTES);
+                    $truncated100CharSku = mb_substr($truncated100CharSku, 0, 100);
                     $json_product->set_sku($truncated100CharSku);
                     $product_meta->update_sku($truncated100CharSku);
                 }
@@ -465,12 +469,21 @@ class LS_QBO_Sync
                     $product_meta->update_product_type($product->get_product_type());
                     $product_meta->update_cost_price($product->get_cost_price());
 
-                    delete_post_meta($product_id, '_ls_json_product_error');
+                    if(isset($productDescriptionCount) && $productDescriptionCount > 4000){
+                        $result = array(
+                            'errorCode' => 2050,
+                            'type' => '',
+                            'userMessage' => 'Product description was synced to QuickBooks but trimmed down from first to 4000 characters',
+                            'technicalMessage' => 'Product description was synced to QuickBooks but trimmed down from first to 4000 characters'
+                        );
+                        update_post_meta($product_id, '_ls_json_product_error', $result);
+                    } else {
+                        delete_post_meta($product_id, '_ls_json_product_error');
+                    }
 
                     LSC_Log::add_dev_success('LS_QBO_Sync::import_single_product_to_qbo', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
 
                 } else {
-                    update_post_meta($product_id, '_ls_json_product_error', $result);
                     if(!empty($result['userMessage']) &&  'Duplicate Name Exists Error' == $result['userMessage']){
                         $productPost = array();
                         $productPost['ID'] = $product_id;
@@ -480,7 +493,7 @@ class LS_QBO_Sync
                         wp_update_post($productPost);
                         self::add_action_save_post();
                     }
-
+                    update_post_meta($product_id, '_ls_json_product_error', $result);
                     LSC_Log::add_dev_failed('LS_QBO_Sync::import_single_product_to_qbo', 'Product ID: ' . $product_id . '<br/><br/>Json product being sent: ' . $j_product . '<br/><br/> Response: ' . json_encode($result));
                 }
             }
@@ -1144,7 +1157,10 @@ class LS_QBO_Sync
     {
 
         if (!empty($_POST['product'])) {
-            $product_total_count = (int)$_POST['product_total_count'] - (int)$_POST['deleted_product'];
+            $deleted_product = (isset($_POST['deleted_product']) && is_numeric($_POST['deleted_product'])) ? $_POST['deleted_product']: 0;
+            $total_product = (isset($_POST['product_total_count']) && is_numeric($_POST['product_total_count'])) ? $_POST['product_total_count']: 0;
+
+            $product_total_count = (int)$total_product - (int)$deleted_product;
 
             $product = new LS_Simple_Product($_POST['product']);
             self::import_single_product_to_woo($product);
