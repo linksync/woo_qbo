@@ -764,10 +764,10 @@ class LS_QBO_Sync
                 "price" => isset($shipping_cost) ? $shipping_cost : null,
                 "quantity" => 1,
                 "sku" => "shipping",
-                'tax_name' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
-                'tax_id' => $shippingQboTaxId,
-                'tax_rate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
-                'tax_value' => $shipping_tax
+                'taxName' => ('' == $qbo_tax) ? null : (isset($qbo_tax[1])) ? $qbo_tax[1] : null,
+                'taxId' => $shippingQboTaxId,
+                'taxRate' => ('' == $qbo_tax) ? null : (isset($qbo_tax[3])) ? $qbo_tax[3] : null,
+                'taxValue' => $shipping_tax
             );
 
             if ($isQuickBooksUsAccount && !empty($shipping_tax)) {
