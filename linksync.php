@@ -960,8 +960,8 @@ class linksync
 
 register_activation_hook(__FILE__, array('linksync', 'activate')); # When plugin get activated it will triger class method "activate"
 if (get_option('linksync_connectionwith') == 'Vend' || get_option('linksync_connectedto') == 'Vend') {
-    add_action('save_post', array('linksync', 'linksync_removespaces'), 1);
-    add_action('save_post', array('linksync', 'linksync_productPost'), 2);
+//    add_action('save_post', array('linksync', 'linksync_removespaces'), 1);
+//    add_action('save_post', array('linksync', 'linksync_productPost'), 2);
 }
 
 if (get_option('order_sync_type') == 'wc_to_vend') {

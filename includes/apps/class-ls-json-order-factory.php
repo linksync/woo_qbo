@@ -73,7 +73,6 @@ class LS_Order_Json_Factory{
 	}
 
 	public function set_comments( $comments ){
-		$comments = empty($comments) ? null : $comments;
 		$this->set( 'comments', $comments );
 	}
 
