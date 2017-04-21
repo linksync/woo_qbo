@@ -54,7 +54,7 @@ class LS_Product_Meta
     {
 
         if ($product instanceof WC_Product) {
-            $this->product_id = $product->id;
+            $this->product_id = $product->get_id();
         } else if (is_numeric($product)) {
             $this->product_id = $product;
         }

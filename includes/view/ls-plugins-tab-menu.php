@@ -1,37 +1,23 @@
 <?php if ( ! defined( 'ABSPATH' ) ) exit('Access is Denied');
+
 update_option('linksync_sycning_status', null);
 /**
 *   Check the current selected tab 
 */
+$settings_tabs = array(
+    'config',
+    'product_config',
+    'order_config',
+    'logs',
+    'support',
+);
+$active_tab = 'config';
 if (isset($_REQUEST['page'], $_REQUEST['setting']) && $_REQUEST['page'] == 'linksync') {
 
-    if ($_REQUEST['setting'] == 'config') {
-
-        $configuration_tab = 'nav-tab-active';
-    
-    } else if ( $_REQUEST['setting'] == 'manage_api_key') {
-        
-        $manage_api_tab = 'nav-tab-active';
-
-    } else if ($_REQUEST['setting'] == 'product_config') {
-    
-        $product_config_tab = 'nav-tab-active';
-
-    } else if ($_REQUEST['setting'] == 'order_config') {
-        
-        $order_config_tab = 'nav-tab-active';
-
-    } else if ($_REQUEST['setting'] == 'logs') {
-        
-        $logs_tab = 'nav-tab-active';
-
-    } else{
-        
-        $configuration_tab = 'nav-tab-active';
-
+    if (in_array($_REQUEST['setting'], $settings_tabs)) {
+        $active_tab = $_REQUEST['setting'];
     }
-} else {
-     $configuration_tab = 'nav-tab-active';
+
 }
 ?>
 <h2>Linksync (Version: <?php echo linksync::$version; ?>)</h2>
@@ -39,6 +25,10 @@ if (isset($_REQUEST['page'], $_REQUEST['setting']) && $_REQUEST['page'] == 'link
 
 if (is_qbo()) {
     LS_QBO()->updateWebhookConnection();
+}
+
+if (is_vend()) {
+    $webhook = LS_Vend()->updateWebhookConnection();
 }
 
 $file_perms = wp_is_writable(plugin_dir_path(__FILE__)); 
@@ -60,10 +50,18 @@ if(is_qbo()){
 }
 
 ?>
+<?php
+    $laid_info = LS_ApiController::get_key_info();
+    if (!empty($laid_info)) {
+        LS_ApiController::update_current_laid_info($laid_info);
+    }
+    do_action('before_linksync_tab_menu');
 
+?>
 <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
-    <a href="<?php echo admin_url('admin.php?page=linksync')?>" class="nav-tab <?php if (isset($configuration_tab)) echo $configuration_tab; ?>">Configuration</a>
-    <a href="<?php echo admin_url('admin.php?page=linksync&setting=product_config')?>"  class="nav-tab <?php if (isset($product_config_tab)) echo $product_config_tab; ?> ">Product Syncing Setting</a>
-    <a href="<?php echo admin_url('admin.php?page=linksync&setting=order_config')?>" class="nav-tab <?php if (isset($order_config_tab)) echo $order_config_tab; ?> ">Order Syncing Setting</a>
-    <a href="<?php echo admin_url('admin.php?page=linksync&setting=logs')?>" class="nav-tab <?php if (isset($logs_tab)) echo $logs_tab; ?>">Logs</a>
+    <a href="<?php echo admin_url('admin.php?page=linksync') ?>" class="nav-tab <?php echo ('config' == $active_tab) ? 'nav-tab-active' : ''; ?>">Configuration</a>
+    <a href="<?php echo admin_url('admin.php?page=linksync&setting=product_config') ?>" class="nav-tab <?php echo ('product_config' == $active_tab) ? 'nav-tab-active' : ''; ?> ">Product Syncing Setting</a>
+    <a href="<?php echo admin_url('admin.php?page=linksync&setting=order_config') ?>" class="nav-tab <?php echo ('order_config' == $active_tab) ? 'nav-tab-active' : ''; ?> ">Order Syncing Setting</a>
+    <a href="<?php echo admin_url('admin.php?page=linksync&setting=support') ?>" class="nav-tab <?php echo ('support' == $active_tab) ? 'nav-tab-active' : ''; ?>">Support</a>
+    <a href="<?php echo admin_url('admin.php?page=linksync&setting=logs') ?>" class="nav-tab <?php echo ('logs' == $active_tab) ? 'nav-tab-active' : ''; ?>">Logs</a>
 </h2>

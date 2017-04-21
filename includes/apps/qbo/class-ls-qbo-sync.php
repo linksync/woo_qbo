@@ -50,8 +50,8 @@ class LS_QBO_Sync
         add_action('wp_ajax_' . $wh_code, array('LS_QBO_Sync', 'sync_triggered_by_lws'));
         add_action('wp_ajax_nopriv_' . $wh_code, array('LS_QBO_Sync', 'sync_triggered_by_lws'));
 
-        add_action('wp_ajax_product_meta', array('LS_QBO_Sync', 'product_meta'));
-        add_action('wp_ajax_nopriv_product_meta', array('LS_QBO_Sync', 'product_meta'));
+        add_action('wp_ajax_ls_product_meta', array('LS_QBO_Sync', 'product_meta'));
+        add_action('wp_ajax_nopriv_ls_product_meta', array('LS_QBO_Sync', 'product_meta'));
 
 
         add_action('wp_ajax_ls_product_options', array('LS_QBO_Sync', 'product_options'));
@@ -231,7 +231,7 @@ class LS_QBO_Sync
     {
 
         set_time_limit(0);
-        $product = new WC_Product($product_id);
+        $product = wc_get_product($product_id);
         $product_meta = new LS_Product_Meta($product_id);
         $product_child = LS_Woo_Product::has_child($product_id);
 
@@ -248,7 +248,6 @@ class LS_QBO_Sync
         $product_options = LS_QBO()->product_option();
         $current_sync_option = $product_options->get_current_product_syncing_settings();
         $isQuickBooksUsAccount = LS_QBO()->isUsAccount();
-        $isLaidVersion11 = LS_QBO()->isLaidVersion11();
 
         if ('two_way' == $current_sync_option['sync_type'] || 'qbo_to_woo' == $current_sync_option['sync_type']) {
             $product_type = $product->post->post_type;
@@ -333,6 +332,7 @@ class LS_QBO_Sync
                 $json_product->set_product_type(LS_QBO_ItemType::NONINVENTORY);
                 if (true == $isNewProduct && $isProductVirtual) {
                     $json_product->set_product_type(LS_QBO_ItemType::SERVICE);
+                    $json_product->remove_quantity();
                 }
 
 
@@ -355,6 +355,9 @@ class LS_QBO_Sync
                 $qboProductType = $product_meta->get_product_type();
                 if(!empty($qboProductType)){
                     $json_product->set_product_type($qboProductType);
+                    if (LS_QBO_ItemType::SERVICE == $qboProductType || LS_QBO_ItemType::NONINVENTORY == $qboProductType) {
+                        $json_product->remove_quantity();
+                    }
                 }
 
 
@@ -379,10 +382,13 @@ class LS_QBO_Sync
 
 
                 $json_product->set_active(1);
+                $productIncomeAccountId = $product_meta->get_income_account_id();
+                $productExpenseAccountId = $product_meta->get_expense_account_id();
+                $productAssetAccountId = $product_meta->get_asset_account_id();
 
-                $income_account_id = ('' != $product_meta->get_income_account_id()) ? $product_meta->get_income_account_id() : $product_options->income_account();
-                $expense_account_id = ('' != $product_meta->get_expense_account_id()) ? $product_meta->get_expense_account_id() : $product_options->expense_account();
-                $asset_account_id = ('' != $product_meta->get_expense_account_id()) ? $product_meta->get_asset_account_id() : $product_options->inventory_asset_account();
+                $income_account_id = (!empty($productIncomeAccountId)) ? $productIncomeAccountId : $product_options->income_account();
+                $expense_account_id = (!empty($productExpenseAccountId)) ? $productExpenseAccountId : $product_options->expense_account();
+                $asset_account_id = (!empty($productAssetAccountId)) ? $productAssetAccountId : $product_options->inventory_asset_account();
 
                 $json_product->set_income_account_id($income_account_id);
                 $json_product->set_expense_account_id($expense_account_id);
@@ -420,12 +426,12 @@ class LS_QBO_Sync
                     $tax_rate = $qboTaxClassInfo['rateValue'];
                 }
 
-                if ($isLaidVersion11) {
-                    $temp_tax_id = $quickbooks_option->getTaxCodeIdByTaxRateId($tax_id);
-                    if (!empty($temp_tax_id)) {
-                        $tax_id = $temp_tax_id;
-                    }
+
+                $temp_tax_id = $quickbooks_option->getTaxCodeIdByTaxRateId($tax_id);
+                if (!empty($temp_tax_id)) {
+                    $tax_id = $temp_tax_id;
                 }
+
 
                 $taxable = ('none' == $product_meta->get_tax_status()) ? 'false' : 'true';
                 if ('product_variation' == $product->post->post_type && !empty($product->post->post_parent)) {
@@ -529,6 +535,8 @@ class LS_QBO_Sync
         $isQuickBooksUsAccount = LS_QBO()->isUsAccount();
 
         $order = wc_get_order($order_id);
+        $orderHelper = new LS_Order_Helper($order);
+
         $selected_order_status = ls_selected_order_status_to_trigger_sync();
 
         $order_status = $order->get_status();
@@ -562,14 +570,19 @@ class LS_QBO_Sync
                 if (!empty($item['variation_id'])) {
                     $product_id = $item['variation_id'];
                     $parentId = $item['product_id'];
-                    $parentVariant = new WC_Product($parentId);
+                    $parentVariant = wc_get_product($parentId);
                 } else {
                     $product_id = $item['product_id'];
                 }
-                $pro_object = new WC_Product($product_id);
+                $pro_object = wc_get_product($product_id);
                 $product_meta = new LS_Product_Meta($product_id);
                 $orderLineItem = new LS_Woo_Order_Line_Item($item);
                 $price = $pro_object->get_price();
+                $lineSubTotal = $orderLineItem->get_subtotal();
+                $lineQuantity = $orderLineItem->get_quantity();
+                if(!empty($lineSubTotal)){
+                    $price = (float)($lineSubTotal / $lineQuantity);
+                }
                 $discount = $orderLineItem->get_discount_amount();
 
                 $qbo_tax = LS_Woo_Tax::get_mapped_quickbooks_tax_for_product(
@@ -614,8 +627,8 @@ class LS_QBO_Sync
                         $taxId =  '';
                     }
                 }
-
-                if (empty($orderLineItem->lineItem['line_tax']) || ('none' == $productTaxStatus && empty($taxId))) {
+                $orderLineTax = $orderLineItem->get_line_tax();
+                if (empty($orderLineTax) || ('none' == $productTaxStatus && empty($taxId))) {
                     $taxName = null;
                     $taxId = null;
                     $taxRate = null;
@@ -624,15 +637,10 @@ class LS_QBO_Sync
 
 
                 //Woocommerce line tax
-                $taxValue = $orderLineItem->lineItem['line_tax'];
-
-                $temp_tax_id = LS_QBO()->options()->getTaxCodeIdByTaxRateId($taxId);
-                if(LS_QBO()->isLaidVersion11() && !empty($temp_tax_id)){
-                    //$taxId = $temp_tax_id;
-                }
+                $taxValue = $orderLineTax;
 
                 //If there is no tax setup on this line item then tax details to null
-                if(empty($orderLineItem->lineItem['line_tax'])){
+                if(empty($orderLineTax)){
                     $taxName = null;
                     $taxId = null;
                     $taxRate = null;
@@ -674,18 +682,19 @@ class LS_QBO_Sync
             $phone = !empty($_POST['_billing_phone']) ? $_POST['_billing_phone'] : $order->billing_phone;
             // Formatted Addresses
             $filtered_billing_address = apply_filters('woocommerce_order_formatted_billing_address', array(
-                'firstName' => !empty($_POST['_billing_first_name']) ? $_POST['_billing_first_name'] : $order->billing_first_name,
-                'lastName' => !empty($_POST['_billing_last_name']) ? $_POST['_billing_last_name'] : $order->billing_last_name,
+                'firstName' => !empty($_POST['_billing_first_name']) ? $_POST['_billing_first_name'] : $orderHelper->getBillingFirsName(),
+                'lastName' => !empty($_POST['_billing_last_name']) ? $_POST['_billing_last_name'] : $orderHelper->getBillingLastName(),
                 'phone' => $phone,
-                'street1' => !empty($_POST['_billing_address_1']) ? $_POST['_billing_address_1'] : $order->billing_address_1,
-                'street2' => !empty($_POST['_billing_address_2']) ? $_POST['_billing_address_2'] : $order->billing_address_2,
-                'city' => !empty($_POST['_billing_city']) ? $_POST['_billing_city'] : $order->billing_city,
-                'state' => !empty($_POST['_billing_state']) ? $_POST['_billing_state'] : $order->billing_state,
-                'postalCode' => !empty($_POST['_billing_postcode']) ? $_POST['_billing_postcode'] : $order->billing_postcode,
-                'country' => !empty($_POST['_billing_country']) ? $_POST['_billing_country'] : $order->billing_country,
-                'company' => !empty($_POST['_billing_company']) ? $_POST['_billing_company'] : $order->billing_company,
-                'email_address' => !empty($_POST['_billing_email']) ? $_POST['_billing_email'] : $order->billing_email
+                'street1' => !empty($_POST['_billing_address_1']) ? $_POST['_billing_address_1'] : $orderHelper->getBillingAddressOne(),
+                'street2' => !empty($_POST['_billing_address_2']) ? $_POST['_billing_address_2'] : $orderHelper->getBillingAddressTwo(),
+                'city' => !empty($_POST['_billing_city']) ? $_POST['_billing_city'] : $orderHelper->getBillingCity(),
+                'state' => !empty($_POST['_billing_state']) ? $_POST['_billing_state'] : $orderHelper->getBillingState(),
+                'postalCode' => !empty($_POST['_billing_postcode']) ? $_POST['_billing_postcode'] : $orderHelper->getBillingPostcode(),
+                'country' => !empty($_POST['_billing_country']) ? $_POST['_billing_country'] : $orderHelper->getBillingCountry(),
+                'company' => !empty($_POST['_billing_company']) ? $_POST['_billing_company'] : $orderHelper->getBillingCompany(),
+                'email_address' => !empty($_POST['_billing_email']) ? $_POST['_billing_email'] : $orderHelper->getBillingEmail()
             ), $order);
+
 
             $billing_address = array(
                 'firstName' => $filtered_billing_address['firstName'],
@@ -702,16 +711,16 @@ class LS_QBO_Sync
             );
 
             $filtered_shipping_address = apply_filters('woocommerce_order_formatted_shipping_address', array(
-                'firstName' => !empty($_POST['_shipping_first_name']) ? $_POST['_shipping_first_name'] : $order->shipping_first_name,
-                'lastName' => !empty($_POST['_shipping_last_name']) ? $_POST['_shipping_last_name'] : $order->shipping_last_name,
+                'firstName' => !empty($_POST['_shipping_first_name']) ? $_POST['_shipping_first_name'] : $orderHelper->getShippingFirstName(),
+                'lastName' => !empty($_POST['_shipping_last_name']) ? $_POST['_shipping_last_name'] : $orderHelper->getShippingLastName(),
                 'phone' => $phone,
-                'street1' => !empty($_POST['_shipping_address_1']) ? $_POST['_shipping_address_1'] : $order->shipping_address_1,
-                'street2' => !empty($_POST['_shipping_address_2']) ? $_POST['_shipping_address_2'] : $order->shipping_address_2,
-                'city' => !empty($_POST['_shipping_city']) ? $_POST['_shipping_city'] : $order->shipping_city,
-                'state' => !empty($_POST['_shipping_state']) ? $_POST['_shipping_state'] : $order->shipping_state,
-                'postalCode' => !empty($_POST['_shipping_postcode']) ? $_POST['_shipping_postcode'] : $order->shipping_postcode,
-                'country' => !empty($_POST['_shipping_country']) ? $_POST['_shipping_country'] : $order->shipping_country,
-                'company' => !empty($_POST['_shipping_company']) ? $_POST['_shipping_company'] : $order->shipping_company,
+                'street1' => !empty($_POST['_shipping_address_1']) ? $_POST['_shipping_address_1'] : $orderHelper->getShippingAddressOne(),
+                'street2' => !empty($_POST['_shipping_address_2']) ? $_POST['_shipping_address_2'] : $orderHelper->getShippingAddressTwo(),
+                'city' => !empty($_POST['_shipping_city']) ? $_POST['_shipping_city'] : $orderHelper->getShippingCity(),
+                'state' => !empty($_POST['_shipping_state']) ? $_POST['_shipping_state'] : $orderHelper->getShippingState(),
+                'postalCode' => !empty($_POST['_shipping_postcode']) ? $_POST['_shipping_postcode'] : $orderHelper->getShippingPostCode(),
+                'country' => !empty($_POST['_shipping_country']) ? $_POST['_shipping_country'] : $orderHelper->getShippingCountry(),
+                'company' => !empty($_POST['_shipping_company']) ? $_POST['_shipping_company'] : $orderHelper->getShippingCompany(),
             ), $order);
 
             $delivery_address = array(
@@ -745,20 +754,14 @@ class LS_QBO_Sync
         if (!empty($shipping_method)) {
 
             $qbo_tax = LS_Woo_Tax::get_mapped_quickbooks_tax_for_shipping($tax_mapping, $order_tax);
-            $shipping_cost = $order->get_total_shipping();
+            $shipping_cost = $orderHelper->getShippingTotal();
             $shipping_tax = $order->get_shipping_tax();
-            if(empty($shipping_tax) && 'no_tax' ==$qbo_tax[0]){
+            if(empty($shipping_tax) && isset($qbo_tax[0]) && 'no_tax' ==$qbo_tax[0]){
                 $qbo_tax[0] = null;
                 $qbo_tax[1] = null;
                 $qbo_tax[3] = null;
             }
-
             $shippingQboTaxId = ('' == $qbo_tax) ? null : (isset($qbo_tax[0])) ? $qbo_tax[0] : null;
-
-            $temp_shipping_tax_id = LS_QBO()->options()->getTaxCodeIdByTaxRateId($shippingQboTaxId);
-            if (LS_QBO()->isLaidVersion11() && !empty($temp_shipping_tax_id)) {
-                //$shippingQboTaxId = $temp_shipping_tax_id;
-            }
 
             $shippingProductLineItem = array(
                 "price" => isset($shipping_cost) ? $shipping_cost : null,
@@ -795,7 +798,7 @@ class LS_QBO_Sync
 
             $payment_method = $order_option->payment_method();
             $order_transaction_id = ('' == $order->get_transaction_id()) ? null : $order->get_transaction_id();
-            $order_payment_method = $order->payment_method;
+            $order_payment_method = $orderHelper->getPaymentMethod();
             $qbo_payment_method_id = null;
             if (!empty($order_payment_method)) {
                 $payment = array();
@@ -836,7 +839,7 @@ class LS_QBO_Sync
 
         $json_order->set_uid(null);
         $json_order->set_orderId($order_no);
-        $json_order->set_idSource($order->id);
+        $json_order->set_idSource($orderHelper->getId());
         $json_order->set_orderType($order_type);
         $json_order->set_created($order_created);
         $json_order->set_source($source);
@@ -860,17 +863,16 @@ class LS_QBO_Sync
             $json_order->set_class_id($order_option->selected_order_class());
         }
 
-
         $order_json_data = $json_order->get_json_orders();
         $post_order = LS_QBO()->api()->order()->save_orders($order_json_data);
 
         if (!empty($post_order['id'])) {
             $note = sprintf(__('Order exported to QBO: %s', 'woocommerce'), $order_no);
             $order->add_order_note($note);
-            delete_post_meta($order_id, '_ls_json_order_error');
+            LS_QBO_Order_Helper::deleteOrderSyncingError($order_id);
             LSC_Log::add_dev_success('LS_QBO_Sync::import_single_order_to_qbo', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
         } else {
-            update_post_meta($order_id, '_ls_json_order_error', $post_order);
+            LS_QBO_Order_Helper::updateOrderSyncingError($order_id, $post_order);
             LSC_Log::add_dev_failed('LS_QBO_Sync::import_single_order_to_qbo', 'Woo Order ID: ' . $order_id . '<br/><br/>Json order being sent: ' . $order_json_data . '<br/><br/> Response: ' . json_encode($post_order));
         }
 
@@ -1097,11 +1099,12 @@ class LS_QBO_Sync
      */
     public static function delete_product($product_id)
     {
-        $product = new WC_Product($product_id);
-        $product_type = $product->post->post_type;
+        $product = wc_get_product($product_id);
+        $productHelper = new LS_Product_Helper($product);
+        $product_type = $productHelper->getType();
 
-        if (is_woo_product($product_type)) {
-            $sku = $product->get_sku();
+        if (LS_QBO_Product_Helper::isSyncAbleToQuickBooks($product_type)) {
+            $sku = $productHelper->getSku();
             if (!empty($sku)) {
                 $delete = LS_QBO()->api()->product()->delete_product($sku);
                 if (!empty($delete)) {

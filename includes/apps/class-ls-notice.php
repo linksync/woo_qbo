@@ -15,9 +15,7 @@ class LS_Notice
         $postid = empty($_GET['post']) ? null : $_GET['post'];
         if ('shop_order' == $current_screen->id) {
 
-            $order = new WC_Order($postid);
-
-            $orderSyncError = $order->ls_json_order_error;
+            $orderSyncError = LS_QBO_Order_Helper::getOrderSyncingError($postid);
             if (isset($orderSyncError['errorCode'])) {
 
                 if (400 == $orderSyncError['errorCode']) {
@@ -29,7 +27,7 @@ class LS_Notice
 
         if ('product' == $current_screen->id) {
             $productMeta = new LS_Product_Meta($postid);
-            $productSyncError = $productMeta->_ls_json_product_error;
+            $productSyncError = $productMeta->get_meta('_ls_json_product_error');
             if (isset($productSyncError['errorCode'])) {
                 $toUserMessage = empty($productSyncError['technicalMessage']) ? $productSyncError['userMessage'] : $productSyncError['technicalMessage'];
                 if (!empty($toUserMessage)) {

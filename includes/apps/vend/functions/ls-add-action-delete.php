@@ -9,7 +9,7 @@ function linksync_DeleteProduct($post_id) {
     $pro_object = new WC_Product($post_id);
     if ($pro_object->post->post_type == 'product') {
         $testMode = get_option('linksync_test');
-        $LAIDKey = LS_ApiController::get_current_laid();
+        $LAIDKey = get_option('linksync_laid');
         $apicall = new linksync_class($LAIDKey, $testMode);
         if (!defined('ABSPATH'))
             define('ABSPATH', dirname(__FILE__) . '/');
@@ -21,9 +21,3 @@ function linksync_DeleteProduct($post_id) {
     }
 }
 
-$pro_sync_type = get_option('product_sync_type');
-if ($pro_sync_type == 'two_way' || $pro_sync_type == 'wc_to_vend') {
-    if (get_option('ps_delete') == 'on') {
-        add_action('before_delete_post', 'linksync_DeleteProduct');
-    }
-}

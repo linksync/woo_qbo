@@ -293,12 +293,12 @@ class LS_Woo_Product
         }
         $json_product->set_product_type(isset($productType) ? $productType : LS_QBO_ItemType::SERVICE);
 
-        $taxable = ('' != $shippingProductDetails['tax_id']) ? true : false;
+        $taxable = ('' != $shippingProductDetails['taxId']) ? true : false;
         $json_product->set_taxable($taxable);
-        $json_product->set_tax_value($shippingProductDetails['tax_value']);
-        $json_product->set_tax_name($shippingProductDetails['tax_name']);
-        $json_product->set_tax_rate($shippingProductDetails['tax_rate']);
-        $json_product->set_tax_id($shippingProductDetails['tax_id']);
+        $json_product->set_tax_value($shippingProductDetails['taxValue']);
+        $json_product->set_tax_name($shippingProductDetails['taxName']);
+        $json_product->set_tax_rate($shippingProductDetails['taxRate']);
+        $json_product->set_tax_id($shippingProductDetails['taxId']);
 
 
         $j_product = $json_product->get_json_product();
@@ -312,10 +312,10 @@ class LS_Woo_Product
             $orderProductSetup['discountAmount'] = 0;
             $orderProductSetup['title'] = $description;
             $orderProductSetup['taxable'] = $taxable;
-            $orderProductSetup['taxValue'] = $shippingProductDetails['tax_value'];
-            $orderProductSetup['taxName'] = $shippingProductDetails['tax_name'];
-            $orderProductSetup['taxRate'] = $shippingProductDetails['tax_rate'];
-            $orderProductSetup['taxId'] = $shippingProductDetails['tax_id'];
+            $orderProductSetup['taxValue'] = $shippingProductDetails['taxValue'];
+            $orderProductSetup['taxName'] = $shippingProductDetails['taxName'];
+            $orderProductSetup['taxRate'] = $shippingProductDetails['taxRate'];
+            $orderProductSetup['taxId'] = $shippingProductDetails['taxId'];
             $orderProductSetup['discountTitle'] = '';
 
             //Save or update the details to qbo shipping product to the wordpress option to use it later

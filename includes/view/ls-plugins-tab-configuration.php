@@ -22,6 +22,9 @@ if (isset($_POST['add_apiKey'])) {
             $connected_with = LS_ApiController::get_connected_app($laid_key_info['app']);
 
             if ('QuickBooks Online' == $connected_to || 'QuickBooks Online' == $connected_with) {
+                set_time_limit(0);
+                $qbo_api = LS_QBO()->api();
+                $qbo_api->get_all_tax_rate(); // send request to qbo/tax api to create zero tax rate
 
                 linksync::update_laid_key_options(array(
                     'linksync_laid' => $laid_key,
@@ -100,14 +103,16 @@ if (isset($_POST['apikey_update'])) {
             $connected_with = LS_ApiController::get_connected_app($ls_api['app']);
 
             if ('QuickBooks Online' == $connected_to || 'QuickBooks Online' == $connected_with) {
+                set_time_limit(0);
+                $qbo_api = LS_QBO()->api();
+                $qbo_api->get_all_tax_rate(); // send request to qbo/tax api to create zero tax rate
 
                 $laid_update = LS_ApiController::update_laid($_POST['apikey']);
                 if(isset($laid_update['is_new']) && $laid_update['is_new']){
-                    $qbo_api = LS_QBO()->api();
+
                     $product_options = LS_QBO()->product_option();
                     $accounts_error = '';
 
-                    set_time_limit(0);
                     $product_options->delete_expense_account();
                     $product_options->delete_income_account();
                     $product_options->delete_inventory_asset_account();
@@ -417,7 +422,7 @@ if (isset($_POST['rest'])) {
                 <p><input type="button" onclick="show_confirm_box();" class="button button-primary" value="Trigger"></p>
                 <?php
             } else {
-                echo "<p align=center style='color:red;font-size:17px;'><b>" . $laid . "</b> does not appear to be a valid API Key</p>";
+                LS_User_Helper::setUpLaidInfoMessage();
             }
             ?>
         </fieldset>

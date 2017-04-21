@@ -70,7 +70,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             global $typenow;
             if ('product' == $typenow && isset($_GET['post'])) {
                 $product_id = (int)$_GET['post'];
-                $product = new WC_Product($product_id);
+                $product = wc_get_product($product_id);
                 $sku = $product->get_sku();
                 $unique_sku = LS_Woo_Product::product_has_unique_sku($product_id, $sku);
 
@@ -448,6 +448,14 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
             include_once LS_INC_DIR . 'apps/class-ls-notice-message-builder.php';
 
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-constant.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-user-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-support-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-helper.php';
+            include_once LS_INC_DIR . 'apps/helpers/class-ls-product-helper.php';
+            include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-helper.php';
+            include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-product-helper.php';
+            include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-order-helper.php';
             if (is_qbo()) {
                 include_once LS_INC_DIR . 'apps/qbo/class-ls-qbo-sync.php';
                 include_once LS_INC_DIR . 'apps/class-ls-notice.php';
@@ -505,6 +513,10 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
                 } elseif ($_GET['setting'] == 'order_config') {
 
+
+                } elseif ($_GET['setting'] == 'support') {
+
+                    LS_Support_Helper::renderFormForSupportTab();
 
                 } else {
                     include_once LS_INC_DIR . 'view/ls-plugins-tab-configuration.php';
@@ -612,18 +624,19 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     <tbody>
                     <?php
                     foreach ($list as $product_ref) {
-                        $product = new WC_Product($product_ref['ID']);
+                        $product = wc_get_product($product_ref['ID']);
+                        $productHelper = new LS_Product_Helper($product);
                         $edit_product_link = get_edit_post_link($product_ref['ID']);
                         if (empty($edit_product_link)) {
-                            $edit_product_link = get_edit_post_link($product->get_parent());
+                            $edit_product_link = get_edit_post_link($productHelper->getParendId());
                         }
 
                         if ('trash' == $product->post->post_status) {
-                            $edit_product_link = admin_url('edit.php?post_status=trash&post_type=product&s=' . $product->get_sku());
+                            $edit_product_link = admin_url('edit.php?post_status=trash&post_type=product&s=' . $productHelper->getSku());
                         }
                         ?>
                         <tr>
-                            <td><?php echo '<a href="', $edit_product_link, '" target="_blank">' . $product->get_title() . '</a>'; ?></td>
+                            <td><?php echo '<a href="', $edit_product_link, '" target="_blank">' . $productHelper->getName() . '</a>'; ?></td>
                             <td><?php echo ($product_ref['meta_value'] == '') ? "Empty SKU('')" : $product_ref['meta_value']; ?></td>
                             <td><?php echo $product->post->post_status; ?></td>
                         </tr>

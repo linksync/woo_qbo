@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.12-beta
+  Version: 2.5.13
  */
 
 /*
@@ -23,7 +23,7 @@ class linksync
     /**
      * @var string
      */
-    public static $version = '2.5.12';
+    public static $version = '2.5.13';
 
     public function __construct()
     {
@@ -33,7 +33,6 @@ class linksync
         $this->includes();
         add_action('admin_menu', array($this, 'linksync_add_menu'), 99); # To create custom menu in Wordpress Side Bar
         add_action('admin_menu', array($this, 'linksync_wooVersion_check'));
-        add_action('admin_notices', array($this, 'linksync_show_message'));
         add_action('plugins_loaded', array($this, 'pluginUpdateChecker'), 0);
 
         add_action('admin_notices', array($this, 'linksync_video_message'));
@@ -137,6 +136,7 @@ class linksync
             wp_enqueue_style('ls-jquery-ui', LS_ASSETS_URL . 'css/jquery-ui/jquery-ui.css');
             wp_enqueue_style('ls-tab-configuration-style', LS_ASSETS_URL . 'css/admin-tabs/ls-plugins-tab-configuration.css');
 
+            LS_Support_Helper::supportScripts();
 
             $connected_to = get_option('linksync_connectedto');
 
@@ -510,20 +510,6 @@ class linksync
             $result['error'] = 'The supplied API Key is not valid for use with linksync for WooCommerce.';
         }
         return $result;
-    }
-
-    public function linksync_show_message()
-    {
-        $laid_message = get_option('laid_message');
-        if (isset($laid_message) && !empty($laid_message)) {
-            ?>
-            <div class="error" style=" border-color: #007AB1;margin-bottom: 10px;
-                  margin-top: 10px;
-                  ">
-                <p><?php echo @$laid_message; ?></p>
-            </div>
-            <?php
-        }
     }
 
     public function linksync_video_message()
@@ -1017,7 +1003,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
     }
 
-    add_action('woocommerce_loaded', 'load_linskync_after_woocommerce_loaded');
+    add_action('woocommerce_init', 'load_linskync_after_woocommerce_loaded');
 
 }
 
