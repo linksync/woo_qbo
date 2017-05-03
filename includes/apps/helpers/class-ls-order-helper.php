@@ -207,5 +207,16 @@ class LS_Order_Helper
         
     }
 
+    public function getCustomerNotes()
+    {
+        if (LS_Helper::isWooVersionLessThan_2_4_15()) {
+            $orderPost = get_post($this->getId());
+
+            return !empty($orderPost['post_excerpt']) ? $orderPost['post_excerpt'] : '';
+        }
+
+        return $this->order->get_customer_note();
+    }
+
 
 }

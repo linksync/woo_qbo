@@ -11,6 +11,7 @@
 			<option value="woo_to_qbo">WooCommerce to QuickBooks</option>
 			<option value="disabled">Disabled</option>
 		<select>
+            <span id="order_sync_type_helper_message">WooCommerce to QuickBooks - orders created in WooCommerce will be synced to QuickBooks online.</span>
 	</p>
 
 	<!-- Woo to QuickBooks options -->
@@ -23,17 +24,24 @@
 				<option <?php echo ('export_as_woo_sale' == $export_customer_data) ? 'selected': ''; ?> value="export_as_woo_sale">No</option>
 			<select>
 			<br>
-			<span><em>If No, customer will be exported as WooCommerce Sale</em></span>
+			<span>If No, customer will be exported as WooCommerce Sale</span>
 		</p>
+
+        <br/>
 		<p class="form-holder">
 			<strong>Post to QuickBooks as</strong>
 			<select name="linksync[order_woo_to_qbo_post_as]" id="order_woo_to_qbo_post_as" class="form-field">
 				<option <?php echo ('sales_receipt' == $post_to_quickbooks_as) ? 'selected': ''; ?> value="sales_receipt">Sales Receipt</option>
 				<option <?php echo ('sales_invoice' == $post_to_quickbooks_as) ? 'selected': ''; ?> value="sales_invoice">Invoice</option>
 			<select>
+                <span id="sales_type_helper_message">Sales Receipt (recommended) - orders from WooCommerce are created in QuickBooks Online as Sales Receipts.</span>
 		</p>
+
+        <br/>
 		<p class="form-holder">
-			<strong>Order Status</strong>
+			<strong style="margin-bottom: -2px;">Order Status</strong>
+            <span>Choose what order statuses should be used to trigger the syncing of WooCommerce orders to QuickBooks Online.</span><br/><br/>
+
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-pending" type="checkbox">Pending Payment</label><br/>
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-processing" type="checkbox">Processing</label><br/>
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-on-hold" type="checkbox">On Hold</label><br/>
@@ -41,6 +49,8 @@
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-cancelled" type="checkbox">Cancelled</label><br/>
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" value="wc-refunded" type="checkbox">Refunded</label>
 		</p>
+
+        <br/>
 		<p class="form-holder">
 			<strong>Order number for QuickBooks</strong>
 			<select name="linksync[order_woo_to_qbo_order_number]" id="order_woo_to_qbo_order_number" class="form-field">
@@ -58,12 +68,22 @@
 <script type="text/javascript">
 	jQuery(function() {
 		// First Load
-		jQuery('#order_syncing_type').val('<?php echo $order_syncing_type; ?>');
+        var orderSyncType = jQuery('#order_syncing_type');
+        var orderSyncTypeHelperMessage = jQuery('#order_sync_type_helper_message');
+        var salesTypeTobeUsed = jQuery('#order_woo_to_qbo_post_as');
+        var saleTypeHelperMessage = jQuery('#sales_type_helper_message');
+
+        orderSyncType.val('<?php echo $order_syncing_type; ?>');
         order_syncing_form_load();
-		
-		jQuery('#order_syncing_type').change(function() {
+        salesTypeMesageToUser();
+
+        orderSyncType.change(function() {
             order_syncing_form_load();
 		});
+
+        salesTypeTobeUsed.change(function () {
+            salesTypeMesageToUser(salesTypeTobeUsed.val());
+        });
 
 		function order_syncing_form_load() {
             var val = jQuery('#order_syncing_type').val();
@@ -75,8 +95,21 @@
                         break;
                 }
             } else {
+
                 jQuery('.linksync_order_syncing_options').hide('slow');
             }
+            var message = '';
+            message =   '<b style="font-weight: bolder;">WooCommerce to QuickBooks</b> - orders created in WooCommerce will be synced to QuickBooks online.<br/>' +
+                        '<b style="font-weight: bolder;">Disabled</b> - orders will not be synced between WooCommerce and QuickBooks Online. See <a href=\'https://help.linksync.com/hc/en-us/articles/206438604-Order-Syncing-Settings\' target=\'_blank\'>Order Syncing Settings</a> for more info. ';
+            orderSyncTypeHelperMessage.html(message);
+        }
+        
+        function salesTypeMesageToUser(val) {
+		    var message = '';
+            message =   '<b style="font-weight: bolder;">Sales Receipt (recommended)</b> - orders from WooCommerce are created in QuickBooks Online as Sales Receipts.<br/>' +
+                        '<b style="font-weight: bolder;">Invoice</b> - orders from WooCommerce are created in QuickBooks Online as invoices. You\'ll need to manually process payment in QuickBooks Online for this option. ';
+
+            saleTypeHelperMessage.html(message);
         }
 	});
 </script>

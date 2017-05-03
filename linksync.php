@@ -5,7 +5,7 @@
   Description:  WooCommerce extension for syncing inventory and order data with other apps, including Xero, QuickBooks Online, Vend, Saasu and other WooCommerce sites.
   Author: linksync
   Author URI: http://www.linksync.com
-  Version: 2.5.13
+  Version: 2.5.14
  */
 
 /*
@@ -23,7 +23,7 @@ class linksync
     /**
      * @var string
      */
-    public static $version = '2.5.13';
+    public static $version = '2.5.14';
 
     public function __construct()
     {
@@ -35,7 +35,9 @@ class linksync
         add_action('admin_menu', array($this, 'linksync_wooVersion_check'));
         add_action('plugins_loaded', array($this, 'pluginUpdateChecker'), 0);
 
-        add_action('admin_notices', array($this, 'linksync_video_message'));
+        if(is_vend()){
+            add_action('admin_notices', array($this, 'linksync_video_message'));
+        }
         add_filter('contextual_help', array($this, 'linksync_help'));
         add_filter('plugin_action_links_' . $pluginBaseName, array($this, 'plugin_action_links'));
 
@@ -150,6 +152,7 @@ class linksync
 
         }
         if (isset($_GET['page']) && $_GET['page'] == 'linksync-wizard') {
+            add_action('admin_head', array('Wizard_Model', 'remove_all_admin_notices_during_wizard_process'));
             wp_enqueue_style('admin-linksync-style', LS_ASSETS_URL . 'css/wizard/wizard-styles.css');
         }
 

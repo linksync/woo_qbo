@@ -749,7 +749,8 @@ class LS_QBO_Sync
 
         $source = 'WooCommerce';
         $comments = $source . ' Order: ' . $order_no;
-
+        $customer_notes = $orderHelper->getCustomerNotes(); 
+        $comments = $customer_notes."\n\n".$comments;
 
         if (!empty($shipping_method)) {
 

@@ -12,18 +12,23 @@
 			<option value="qbo_to_woo">QuickBooks to WooCommerce</option>
 			<option value="disabled">Disabled</option>
 		<select>
+            <span id="sync_type_helper_message" style="font-size: 12px !important;">Your unique API Key is created when you linked your apps at <a href="https://my.linksync.com/" target="_blank">my.linksync.com</a></span>
 	</p>
+
 	
 	<!-- Two way options -->
 	<div id="linksync_product_two_way" class="linksync_product_syncing_options" style="display:none;">
 		<h3>Two Way Options</h3>
 		<p class="form-holder">
 			<strong>Match product with</strong>
-			<select name="linksync[match_product_with]" id="match_product_with" class="form-field">
+			<select name="linksync[match_product_with]" id="two_way_match_product_with" class="form-field">
+                <option <?php echo ('sku' == $match_product_with) ? 'selected' : ''; ?>  value="sku">SKU</option>
 				<option <?php echo ('name' == $match_product_with) ? 'selected' : ''; ?> value="name">Name</option>
-				<option <?php echo ('sku' == $match_product_with) ? 'selected' : ''; ?>  value="sku">SKU</option>
 			<select>
+                <span class="match_product_with_message" style="font-size: 12px !important;">SKU (recommended) - match and sync products based on the 'SKU' field from both WooCommerce and QuickBooks Online Products </span>
 		</p>
+
+
 		<p class="form-holder">
 			<strong>Name/Title</strong>
 			<label for="product_two_way_name_title">
@@ -83,6 +88,7 @@
                 <option <?php echo ('name' == $match_product_with) ? 'selected' : ''; ?> value="name">Name</option>
                 <option <?php echo ('sku' == $match_product_with) ? 'selected' : ''; ?>  value="sku">SKU</option>
 			<select>
+                <span class="match_product_with_message" style="font-size: 12px !important;">SKU (recommended) - match and sync products based on the 'SKU' field from both WooCommerce and QuickBooks Online Products</span>
 		</p>
 		<p class="form-holder">
 			<strong>Name/Title</strong>
@@ -144,8 +150,23 @@
 <script type="text/javascript">
 	jQuery(function() {
 		// First Load
+        var syncTypeMessage = jQuery('#sync_type_helper_message');
+        var twoWayMatchProductWith = jQuery('#two_way_match_product_with');
+        var matchProductWithMessage = jQuery('.match_product_with_message');
+        var qboToWooMatchProductWith = jQuery('#product_qbo_to_woo_match_product_with');
+
 		jQuery('#product_syncing_type').val('<?php echo $product_syncing_type; ?>');
         product_syncing_form_load();
+        match_product_with_change_value();
+
+
+        twoWayMatchProductWith.change(function () {
+            match_product_with_change_value(twoWayMatchProductWith.val());
+        });
+
+        qboToWooMatchProductWith.change(function () {
+            match_product_with_change_value(qboToWooMatchProductWith.val());
+        });
 
 		jQuery('#product_syncing_type').change(function () {
             product_syncing_form_load();
@@ -156,6 +177,7 @@
             if(val != 'disabled') {
                 switch(val) {
                     case 'two_way':
+                        match_product_with_change_value(twoWayMatchProductWith.val());
                         jQuery('#linksync_product_two_way').show('slow');
                         jQuery('#linksync_product_qbo_to_woo').hide('slow');
                         break;
@@ -163,11 +185,25 @@
                     case 'qbo_to_woo':
                         jQuery('#linksync_product_two_way').hide('slow');
                         jQuery('#linksync_product_qbo_to_woo').show('slow');
+
                         break;
                 }
             } else {
+
                 jQuery('.linksync_product_syncing_options').hide('slow');
             }
+            var message =   '<b style="font-weight: bolder;">Two way (recommended)</b> - product changes made in either WooCommerce or QuickBooks Online will be kept in sync.<br/>' +
+                            '<b style="font-weight: bolder;">QuickBooks Online to WooCommerce</b> - changes made in QuickBooks Online will be synced to WooCommerce, but changes made in Woo won\'t be synced to QuickBooks Online.<br/>' +
+                            '<b style="font-weight: bolder;">Disabled</b> - products information will not be synced between WooCommerce and QuickBooks Online. See <a href=\'https://help.linksync.com/hc/en-us/articles/206438584-Product-Syncing-Settings\' target=\'_blank\'> Product Syncing Settings</a> for more info. <br/>';
+            syncTypeMessage.html(message);
+
+        }
+
+        function match_product_with_change_value(val) {
+            var message = '';
+            message =   '<b style="font-weight: bolder;">SKU (recommended)</b> - match and sync products based on the \'SKU\' field from both WooCommerce and QuickBooks Online Products<br/>' +
+                        '<b style="font-weight: bolder;">Name</b> - use the Name field in QuickBooks Online to Name field in WooCommerce See <a href=\'https://help.linksync.com/hc/en-us/articles/206438584-Product-Syncing-Settings\' target=\'_blank\'> Product Syncing Settings</a> for more info. ';
+            matchProductWithMessage.html(message);
         }
 	});
 </script>

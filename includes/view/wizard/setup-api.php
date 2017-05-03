@@ -16,6 +16,7 @@
 	<p class="form-holder">
 		<input type="text" id="api_key" name="linksync[api_key]" class="form-field" placeholder="Enter you API KEY"  value="<?php echo $laid; ?>"/>
 	</p>
+    <span><em>Your unique API Key is created when you linked your apps at <a href="https://my.linksync.com/" target="_blank">my.linksync.com</a> </em></span>
 	<p class="form-holder">
 		<input type="submit" name="submit" value="Next Step" />
 	</p>
