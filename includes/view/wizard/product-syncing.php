@@ -17,7 +17,7 @@
                 <b style="font-weight: bolder;">Two way (recommended)</b> - product changes made in either WooCommerce or Vend will be kept in sync.<br/>
                 <b style="font-weight: bolder;">Vend to WooCommerce</b> - changes made in Vend will be synced to WooCommerce, but changes made in WooCommerce won't be synced to Vend.<br/>
                 <b style="font-weight: bolder;">WooCommerce to Vend</b> - changes made in WooCommerce will be synced to Vend, but changes made in Vend won't be synced to WooCommerce.<br/>
-                <b style="font-weight: bolder;">Disabled</b> - products information will not be synced between WooCommerce and Vend. See <a href="https://help.linksync.com/hc/en-us/articles/205715889-Product-Syncing-Settings" target="_blank"> Product Syncing Settings</a> for more info. <br/>
+                <b style="font-weight: bolder;">Disabled</b> - products information will not be synced between WooCommerce and Vend. <br/>See <a href="https://help.linksync.com/hc/en-us/articles/205715889-Product-Syncing-Settings" target="_blank"> Product Syncing Settings</a> for more info. <br/>
             </span>
 	</p>
 	

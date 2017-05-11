@@ -3,10 +3,52 @@
 class LS_Product_Helper
 {
     protected $product = null;
+    public $post_data = null;
 
     public function __construct(WC_Product $product)
     {
         $this->product = $product;
+        $this->post_data = get_post($this->product->get_id());
+    }
+
+    public function getPostTitle()
+    {
+        if(isset($this->post_data->post_title)){
+            return $this->post_data->post_title;
+        }
+        return null;
+    }
+
+    public function getPostContent()
+    {
+        if (isset($this->post_data->post_content)) {
+            return $this->post_data->post_content;
+        }
+        return null;
+    }
+
+    public function getPostParentId()
+    {
+        if(isset($this->post_data->post_parent)){
+            return $this->post_data->post_parent;
+        }
+        return null;
+    }
+
+    public function getPostStatus()
+    {
+        if(isset($this->post_data->post_status)){
+            return $this->post_data->post_status;
+        }
+        return null;
+    }
+
+    public function getPostType()
+    {
+        if(isset($this->post_data->post_type)){
+            return $this->post_data->post_type;
+        }
+        return null;
     }
 
     public function getParendId()
@@ -141,6 +183,7 @@ class LS_Product_Helper
 
         return $product->get_parent_id();
     }
+
 
 
 }

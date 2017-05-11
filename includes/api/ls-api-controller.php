@@ -96,6 +96,9 @@ class LS_ApiController{
             $laid_key_options['errorCode'] = $current_laid_key_info['errorCode'];
             $laid_key_options['lws_laid_key_info'] = $current_laid_key_info;
 
+            set_time_limit(0);
+            $qbo_api = LS_QBO()->api();
+            $qbo_api->get_all_tax_rate(); // send request to qbo/tax api to create zero tax rate
             return $laid_key_options;
 
         } else {

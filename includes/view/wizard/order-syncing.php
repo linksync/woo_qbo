@@ -15,7 +15,7 @@
             <span>
                 <b style="font-weight: bolder;">Vend to WooCommerce</b> - orders created in Vend will be synced to WooCommerce.<br/>
                 <b style="font-weight: bolder;">WooCommerce to Vend</b> - orders created in WooCommerce will be synced to Vend.<br/>
-                <b style="font-weight: bolder;">Disabled</b> - orders will not be synced between WooCommerce and Vend. See <a href="https://help.linksync.com/hc/en-us/articles/205715939-Order-Syncing-Settings" target="_blank">Order Syncing Settings</a> for more info.
+                <b style="font-weight: bolder;">Disabled</b> - orders will not be synced between WooCommerce and Vend. <br/>See <a href="https://help.linksync.com/hc/en-us/articles/205715939-Order-Syncing-Settings" target="_blank">Order Syncing Settings</a> for more info.
             </span>
 	</p>
 	
@@ -29,7 +29,7 @@
 				<option value="guest">No</option>
 			<select>
 			<br>
-			<span>If No, customer will be imported as guest</span>
+			<span class="helper-message-font-size-12">If No, customer will be imported as guest.</span>
 		</p>
 		<p class="form-holder">
             <br/>

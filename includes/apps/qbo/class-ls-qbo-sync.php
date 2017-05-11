@@ -212,17 +212,6 @@ class LS_QBO_Sync
 
     }
 
-    public static function import_woo_product_to_qbo()
-    {
-
-        if (!empty($_POST['p_id'])) {
-            LS_QBO_Sync::import_single_product_to_qbo($_POST['p_id']);
-
-            $msg = $_POST['product_number'] . " of " . $_POST['total_count'] . " Product(s)";
-            wp_send_json($msg);
-        }
-    }
-
     /**
      * @param $product_id
      * @return string
@@ -232,6 +221,7 @@ class LS_QBO_Sync
 
         set_time_limit(0);
         $product = wc_get_product($product_id);
+        $productHelper = new LS_Product_Helper($product);
         $product_meta = new LS_Product_Meta($product_id);
         $product_child = LS_Woo_Product::has_child($product_id);
 
@@ -250,10 +240,11 @@ class LS_QBO_Sync
         $isQuickBooksUsAccount = LS_QBO()->isUsAccount();
 
         if ('two_way' == $current_sync_option['sync_type'] || 'qbo_to_woo' == $current_sync_option['sync_type']) {
-            $product_type = $product->post->post_type;
+            $product_type = $productHelper->getType();
+            $post_parent = $productHelper->getPostParentId();
 
             //Check if the post type is product
-            if (is_woo_product($product_type)) {
+            if (LS_QBO_Product_Helper::isSyncAbleToQuickBooks($product_type)) {
                 $json_product = new LS_Json_Product_Factory($product);
 
                 $qbo_product_id = $product_meta->get_product_id();
@@ -261,10 +252,9 @@ class LS_QBO_Sync
                     $json_product->set_id(get_qbo_id($qbo_product_id));
                 }
 
-                $productName = $product->get_title();
+                $productName = $productHelper->getPostTitle();
                 $productNameLength = strlen($productName);
-                $truncated100CharProductName = mb_substr($productName, 0, 100);
-                $truncated100CharProductName =  htmlentities($truncated100CharProductName, ENT_QUOTES);
+                $truncated100CharProductName = LS_QBO_Product_Helper::prepareProductNameForQuickBooks($productName);
                 $json_product->set_name($truncated100CharProductName);
                 /**
                  * Override product name/title if it has more than 100 character because
@@ -281,8 +271,8 @@ class LS_QBO_Sync
                 }
 
                 if ('on' == $product_options->description()) {
-                    $productDescription = $product->post->post_content;
-                    if ('product_variation' == $product->post->post_type) {
+                    $productDescription = $productHelper->getPostContent();
+                    if ($productHelper->isVariation()) {
                         $productDescription = $product_meta->get_variation_description();
                     }
                     $productDescription = htmlentities($productDescription, ENT_QUOTES);
@@ -434,8 +424,8 @@ class LS_QBO_Sync
 
 
                 $taxable = ('none' == $product_meta->get_tax_status()) ? 'false' : 'true';
-                if ('product_variation' == $product->post->post_type && !empty($product->post->post_parent)) {
-                    $parent_product_meta = new LS_Product_Meta($product->post->post_parent);
+                if ($productHelper->isVariation() && !empty($post_parent)) {
+                    $parent_product_meta = new LS_Product_Meta($post_parent);
                     $taxable = ('none' == $parent_product_meta->get_tax_status()) ? 'false' : 'true';
                 }
 
@@ -650,7 +640,7 @@ class LS_QBO_Sync
                 $products[] = array(
                     'id' => get_qbo_id($product_meta->get_product_id()),
                     'sku' => $pro_object->get_sku(),
-                    'title' => $pro_object->get_title(),
+                    'title' => LS_QBO_Product_Helper::prepareProductNameForQuickBooks($pro_object->get_title()),
                     'price' => $price,
                     'quantity' => $item['qty'],
                     'discountAmount' => $discount,
@@ -679,7 +669,7 @@ class LS_QBO_Sync
         $export_types = $order_option->get_all_export_type();
         if ($export_types[0] == $order_option->customer_export()) {
 
-            $phone = !empty($_POST['_billing_phone']) ? $_POST['_billing_phone'] : $order->billing_phone;
+            $phone = !empty($_POST['_billing_phone']) ? $_POST['_billing_phone'] : $orderHelper->getBillingPhone();
             // Formatted Addresses
             $filtered_billing_address = apply_filters('woocommerce_order_formatted_billing_address', array(
                 'firstName' => !empty($_POST['_billing_first_name']) ? $_POST['_billing_first_name'] : $orderHelper->getBillingFirsName(),
@@ -1173,7 +1163,32 @@ class LS_QBO_Sync
             $product_number = ($product_number > $product_total_count) ? $product_total_count : $product_number;
             $msg = $product_number . " of " . $product_total_count . " Product(s)";
 
-            wp_send_json($msg);
+            $progressValue = round(($product_number / $product_total_count) * 100);
+
+            $response = array(
+                'msg' => $msg,
+                'percentage' => $progressValue
+            );
+            wp_send_json($response);
+        }
+    }
+
+    public static function import_woo_product_to_qbo()
+    {
+
+        if (!empty($_POST['p_id'])) {
+            LS_QBO_Sync::import_single_product_to_qbo($_POST['p_id']);
+            $product_number = isset($_POST['product_number']) ? $_POST['product_number'] : 0;
+            $product_total_count = isset($_POST['total_count']) ? $_POST['total_count'] : 0;
+            $product_number = ($product_number > $product_total_count) ? $product_total_count : $product_number;
+            $progressValue = round(($product_number / $product_total_count) * 100);
+            $msg = $product_number . " of " . $product_total_count . " Product(s)";
+
+            $response = array(
+                'msg' => $msg,
+                'percentage' => $progressValue
+            );
+            wp_send_json($response);
         }
     }
 

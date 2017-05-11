@@ -18,6 +18,7 @@ class Wizard_Model
         }
     }
 
+
     public static function remove_all_admin_notices_during_wizard_process()
     {
         remove_all_actions('admin_notices');
@@ -136,9 +137,17 @@ class Wizard_Model
     {
         $synctype = $_POST['synctype'];
         $data = $_POST['linksync'];
+        $product_option = null;
+        $product_sync_type = isset($data['order_sync_type']) ? $data['order_sync_type'] : 'disabled';
+        $url = admin_url('admin.php?page=linksync');
+        $nextpage = !empty($_POST['nextpage']) ? $_POST['nextpage'] : 0;
+
         if ($synctype == 'qbo') {
-            update_option('ls_osqbo_sync_type', $data['order_sync_type']);
-            switch ($data['order_sync_type']) {
+            update_option('ls_osqbo_sync_type', $product_sync_type);
+            if('disabled' != $product_sync_type && $nextpage > 0){
+                $url .= '-wizard&step=' . $nextpage;
+            }
+            switch ($product_sync_type) {
                 case 'woo_to_qbo':
                     LS_QBO()->order_option()->update_customer_export($data['order_woo_to_qbo_export_customer']);
                     LS_QBO()->order_option()->update_receipt_type($data['order_woo_to_qbo_post_as']);
@@ -147,8 +156,11 @@ class Wizard_Model
                     break;
             }
         } else {
-            update_option('order_sync_type', $data['order_sync_type']);
-            switch ($data['order_sync_type']) {
+            update_option('order_sync_type', $product_sync_type);
+            if('disabled_sync' != $product_sync_type && $nextpage > 0){
+                $url .= '-wizard&step=' . $nextpage;
+            }
+            switch ($product_sync_type) {
                 case 'vend_to_wc-way':
                     update_option('vend_to_wc_customer', $data['order_vend_to_woo_import_customer']);
                     update_option('order_vend_to_wc', $data['order_vend_to_woo_order_status']);
@@ -160,11 +172,8 @@ class Wizard_Model
             }
         }
 
-        $nextpage = isset($_POST['nextpage']) ? $_POST['nextpage'] : 0;
-        if ($nextpage == 0) {
-            wp_redirect(admin_url('admin.php?page=linksync'));
-            exit();
-        }
+        wp_redirect($url);
+        exit();
     }
 
     public static function checkAppConnection($apikey, $save = 0)

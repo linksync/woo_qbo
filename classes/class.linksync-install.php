@@ -61,6 +61,7 @@ class Linksync_installation {
 						case 3:
 							// Set up Order syncing options
 							$view_ocontent = '';
+                            $product_syncing_type = 'disabled';
 							if(isset($res['connected_to']) && $res['connected_to'] == 'QuickBooks Online') {
 								$view_ocontent = '-qbo';
 								$order_option = LS_QBO()->order_option();
@@ -69,9 +70,22 @@ class Linksync_installation {
 								$post_to_quickbooks_as = $order_option->receipt_type();
 
 								$order_number_for_quickbooks = $order_option->order_number();
+
+                                $product_option = LS_QBO()->product_option();
+                                $product_syncing_type = $product_option->sync_type();
 							}
 							include_once(LS_PLUGIN_DIR.'includes/view/wizard/order-syncing'. $view_ocontent .'.php');
 							break;
+                        case 4:
+                            $syncing_page = 'vend';
+                            if(isset($res['connected_to']) && $res['connected_to'] == 'QuickBooks Online') {
+                                $syncing_page = 'qbo';
+                            } else if(isset($res['connected_to']) && $res['connected_to'] == 'Vend') {
+                                $syncing_page = 'vend';
+                            }
+
+                            include_once(LS_PLUGIN_DIR.'includes/view/wizard/'. $syncing_page .'-product-sync.php');
+                            break;
 					}
 					
 					?>

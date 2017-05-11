@@ -369,17 +369,7 @@ if (isset($_POST['rest'])) {
             if ('disabled' != $options['sync_type']) {
 
                 $match_with = $product_option->match_product_with();
-                //if Discount option and Shipping option is not enable
-                $qbo_info['qbo_info'] = LS_QBO()->api()->get_qbo_info();
-                $qbo_allow_discount = isset($qbo_info['qbo_info']['allowDiscount']) ? $qbo_info['qbo_info']['allowDiscount'] : false;
-                $qbo_allow_shipping = isset($qbo_info['qbo_info']['allowShipping']) ? $qbo_info['qbo_info']['allowShipping'] : false;
-
-                if (!$qbo_allow_discount || !$qbo_allow_shipping) {
-
-                    LS_QBO()->show_shipping_and_discount_guide($qbo_info);
-                    $show_manual_sync = false;
-
-                } elseif ('sku' == $match_with) {
+                if ('sku' == $match_with) {
 
                     $duplicateProductSkus = LS_Woo_Product::get_woo_duplicate_sku();
                     $emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();

@@ -42,7 +42,7 @@
                 'show_description'  :   $showDescriptionError
             }
             console.log($data);
-            post_data($data, function (response) {
+            lsAjax.post($data, function (response) {
                 console.log(response);
             })
         });
@@ -59,7 +59,7 @@
             };
             ajax_flag = 1;
 
-            post_data($data ,function(html_response){
+            lsAjax.post($data ,function(html_response){
                 main_view_container.fadeIn('slow').append(html_response);
                 ls_wrapper.removeClass('ls-loading');
                 ajax_flag = 1;
@@ -141,10 +141,13 @@
             ls_pop_ups.fadeOut();
         });
 
+
+
         /**
          * Click event for syncing product comming from qbo to woocommerce
          */
         ls_wrapper.on('click', '.product_from_qbo', function(){
+            lsSyncModal.showSyncModal();
             product_from_qbo_to_woo();
             done_required_sync();
         });
@@ -153,6 +156,7 @@
          * Click event for syncing prodcut from woocommerce to qbo
          */
         ls_wrapper.on('click', '.product_to_qbo', function(){
+            lsSyncModal.showSyncModal();
             product_from_woo_to_qbo();
             done_required_sync();
         });
@@ -165,7 +169,7 @@
             var sync_all_products_from  =   $('.sync_all_products_from_qbo');
             var ls_pop_ups              =   $('.ls-pop-ups');
 
-            sync_pop_up_msghtml.html('Your changes will require a full re-sync of product data  <br/>  Do you want to re-sync now?');
+            sync_pop_up_msghtml.html('Your products from QuickBooks Online will be imported to WooCommerce.<br/>Do you wish to continue?');
             two_buttons_cont.hide();
             sync_all_products_to.hide();
             sync_all_products_from.show();
@@ -179,7 +183,7 @@
             var sync_all_products_from  =   $('.sync_all_products_from_qbo');
             var ls_pop_ups              =   $('.ls-pop-ups');
 
-            sync_pop_up_msghtml.html('Do you want to sync all the products to QuickBooks?');
+            sync_pop_up_msghtml.html('Your WooCommerce products will be exported to QuickBooks Online. <br/> Do you wish to continue?');
             two_buttons_cont.hide();
             sync_all_products_to.show();
             sync_all_products_from.hide();
@@ -190,7 +194,7 @@
             var data = {
                 action : 'qbo_done_syncing_required'
             };
-            post_data(data, function (data) {
+            lsAjax.post(data, function (data) {
                 $('.require-resync').hide();
             });
         }
@@ -213,7 +217,8 @@
             popup_message.hide();
             sync_progress_cont.fadeIn();
             popup_btn_con.hide();
-            sync_message.html("Getting products from QuickBooks Online.");
+            $(".progress-label").html("Getting products from QuickBooks Online.");
+            $("#progressbar").progressbar("value", 1);
 
             //check if page is undefined then we set it to one
             if(typeof page == 'undefined'){
@@ -224,7 +229,7 @@
             }
             var product_number = 0;
 
-            get_product_by_page(page, function(res){
+            lsAjax.get_product_by_page(page, function(res){
                 var product_count = res.products.length;
 
                 if(product_count > 0){
@@ -251,20 +256,23 @@
                             deleted_product     :   res.pagination.deleted_product
                         };
 
-                        post_data(p_data,function(p_res){
-                            sync_message.html("Importing Products to Woocomerce.");
-                            sync_progress.html(p_res);
+                        lsAjax.post(p_data,function(p_res){
                             console.log(p_res);
+                            progressVal = $("#progressbar").progressbar( "value" );
+                            if(progressVal < p_res.percentage){
+                                $("#progressbar").progressbar("value", p_res.percentage);
+                                $(".progress-label").html("Importing " + p_res.msg + " to WooCommerce (" + p_res.percentage + "%)");
+                            }
 
-                            // post_data({action: 'ls_product_sync_all_to_woo_happens'}, function (syncAllResponse) {
-                            //     if('yes' != syncAllResponse.show_big_error){
-                            //         //Hide the big error message if not yes
-                            //         bigErrorMsg.hide();
-                            //     }
-                            // })
+                            console.log(p_res);
+                            console.log("progress => " + p_res.percentage);
+
                         });
                     }
 
+                } else if (product_count <= 1){
+                    $("#progressbar").progressbar("value", 100);
+                    $(".progress-label").html("No products were imported to WooCommerce");
                 }
 
 
@@ -283,41 +291,6 @@
 
         }
 
-        /**
-         * Get products by page, each page contains a maximum of 50 products
-         * @param page
-         * @param callback
-         */
-        function get_product_by_page( page, callback ){
-            var data = {
-                action: 'qbo_get_products',
-                page: page
-            };
-
-            post_data(data, function(response){
-
-                if(!$.isEmptyObject(response)){
-
-                    if(!$.isEmptyObject(response.products)){
-                        callback(response);
-                    }
-                }
-            });
-
-        }
-
-        /**
-         * ajax post request
-         * @param data
-         * @param callback
-         */
-        function post_data(data, callback){
-            /**
-             * since wordpress 2.8 ajaxurl is always defined in the admin header and points to admin-ajax.php
-             * @reference https://codex.wordpress.org/AJAX_in_Plugins#Ajax_on_the_Administration_Side
-             */
-            return $.post(ajaxurl, data, callback);
-        }
 
         function product_from_woo_to_qbo(){
             console.log('woo products to qbo');
@@ -335,9 +308,12 @@
             popup_btn_con.hide();
             sync_message.html("Starting...").fadeIn().delay(20000).fadeIn().html("Exporting Product to QuickBooks");
             sync_progress.html("");
+            $(".progress-label").html("Getting WooCommerce products to be exported in QuickBooks Online.");
+            $("#progressbar").progressbar("value", 1);
 
-
-            post_data({action: 'woo_get_products'}, function(woo_products){
+            lsAjax.post({action: 'woo_get_products'}, function(woo_products){
+                $("#progressbar").progressbar("value", 2);
+                console.log(woo_products);
                 if(!$.isEmptyObject(woo_products)){
                     var product_total_count = woo_products.length;
 
@@ -351,12 +327,20 @@
                                 product_number      :   product_number,
                                 total_count         :   product_total_count,
                             };
-                            post_data(data, function(response){
-                                console.log(response);
-                                sync_progress.html(response);
+                            lsAjax.post(data, function(p_res){
+                                console.log(p_res);
+                                sync_progress.html(p_res);
+                                progressVal = $("#progressbar").progressbar( "value" );
+                                if(progressVal < p_res.percentage){
+                                    $("#progressbar").progressbar("value", p_res.percentage);
+                                    $(".progress-label").html("Exported " + p_res.msg + " to QuickBooks Online (" + p_res.percentage + "%)");
+                                }
                             });
                         }
                     }
+                } else {
+                    $("#progressbar").progressbar("value", 100);
+                    $(".progress-label").html("No products from WooCommerce to export in QuickBooks Online");
                 }
             });
         }
@@ -368,30 +352,27 @@
         ls_wrapper.ajaxStop(function() {
             if(ajax_flag == 0){
                 var syncing_loader          =   $('#syncing_loader');
-                var sync_progress           =   $('#sync_progress');
-                var sync_message            =   $('#sync_message');
                 var ls_pop_ups              =   $('.ls-pop-ups');
                 var btn_no                  =   $('.btn-no');
                 var popup_message           =   $('#popup_message');
                 var sync_progress_cont      =   $('#sync_progress_container');
                 var popup_btn_con           =   $('#pop_up_btn_container');
 
-                syncing_loader.fadeOut('fast');
-                sync_progress.fadeOut('fast');
-                sync_message.css({"font-size":"15px", "margin-top": "15px"}).html("Product syncing successfully completed!!!");
 
-                ls_pop_ups.delay(2500).fadeOut('slow',function(){
-                    //Reset the popup
-                    btn_no.show();
-                    popup_message.show();
-                    sync_progress_cont.hide();
-                    popup_btn_con.show();
-                    syncing_loader.show();
-                    sync_progress.html("").show();
-                    sync_message.css({"font-size":"1em", "margin-top": "0px"}).html("");
-                });
+                // ls_pop_ups.delay(3000).fadeOut('slow',function(){
+                //     //Reset the popup
+                //     btn_no.show();
+                //     popup_message.show();
+                //     sync_progress_cont.hide();
+                //     popup_btn_con.show();
+                //     syncing_loader.show();
+                // });
             }
         });
+
+
+        
+
 
         function show_product_syncing_settings(){
 
@@ -400,9 +381,9 @@
             ls_wrapper.addClass('ls-loading');
             main_view_container.empty();
 
-            post_data({action: 'save_needed_ps_data_from_qbo'}, function(response){
+            lsAjax.post({action: 'save_needed_ps_data_from_qbo'}, function(response){
 
-                post_data({action: 'show_ps_view'},function(html_response){
+                lsAjax.post({action: 'show_ps_view'},function(html_response){
                     main_view_container.append(html_response).fadeIn(function(){
                         ls_wrapper.removeClass('ls-loading');
                     });

@@ -75,20 +75,6 @@ class LS_QBO_Product_Form
 
         if ('disabled' != $user_options['sync_type']) {
 
-            //if Discount option and Shipping option is not enabled
-            if (isset($user_options['qbo_info'])) {
-                if (isset($user_options['qbo_info']['allowDiscount']) && isset($user_options['qbo_info']['allowShipping'])) {
-                    if (!$user_options['qbo_info']['allowDiscount'] || !$user_options['qbo_info']['allowShipping']) {
-                        LS_QBO()->show_shipping_and_discount_guide($user_options);
-                        die();
-                    }
-                } else {
-                    LS_QBO()->show_shipping_and_discount_guide($user_options);
-                    die();
-                }
-            }
-
-
             if ('sku' == $user_options['match_product_with']) {
 
                 $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
@@ -314,68 +300,82 @@ class LS_QBO_Product_Form
         $options = $this->options;
 
         ?>
-        <div id="pop_up" class="ls-pop-ups"
-             style="display: <?php echo $options['sync_type'] != $this->sync_types[2] ? $options['pop_up_style'] : 'none'; ?>">
-            <div class="close-container">
-                <div class="ui-icon ui-icon-close close-reveal-modal btn-no"></div>
-            </div>
+        <div class="ls-sync-modal" sync-type="<?php echo $options['sync_type']; ?>">
+            <div id="pop_up" class="ls-pop-ups ls-modal-content"
+                 style="display: <?php echo $options['sync_type'] != $this->sync_types[2] ? $options['pop_up_style'] : 'none'; ?>">
+                <div class="close-container">
+                    <div class="ui-icon ui-icon-close close-reveal-modal btn-no" style="width: 16px;height: 17px;"></div>
+                </div>
 
-            <div id="sync_progress_container" style="display: none;">
+                <div id="sync_progress_container" style="display: none;">
 
-                <center>
-                    <div id="syncing_loader">
-                        <p>Please do not close or refresh the browser while syncing is in progress.</p>
-                        <img src="../wp-content/plugins/linksync/assets/images/linksync/ajax-loader.gif">
-                    </div>
-                </center>
+                    <center>
+                        <br/>
+                        <div id="syncing_loader">
+                            <p style="font-weight: bold;">Please do not close or refresh the browser while syncing is in progress.</p>
+                        </div>
+                    </center>
+                    <center>
+                        <div>
+                            <div id="progressbar"></div>
+                            <div class="progress-label">Loading...</div>
+                        </div>
+                        <p class="form-holder hide ls-dashboard-link" >
+                            <a href="<?php echo admin_url('admin.php?page=linksync'); ?>" class="a-href-like-button">Go To Dashboard</a>
+                        </p>
+                    </center>
+                    <br/>
 
-                <center><h4 id="sync_message"></h4></center>
-                <center><h4 id="sync_progress"></h4></center>
-                <br/>
+                </div>
 
-            </div>
+                <div id="popup_message">
+                    <center>
+                        <div>
+                            <h4 id="sync_pop_up_msg" class="modal-message">Your products from QuickBooks Online will be imported to WooCommerce.<br/>
+                                Do you wish to continue?</h4>
+                        </div>
 
-            <div id="popup_message">
-                <center>
-                    <div>
-                        <h4 id="sync_pop_up_msg">Your changes will require a full re-sync of product data <br/> Do you
-                            want to re-sync now?</h4>
-                    </div>
-                </center>
-            </div>
+                    </center>
+                </div>
 
 
-            <div id="pop_up_btn_container">
-                <?php
-                //Button to be shown on product syncing settings page to sync
-                if ($options['sync_type'] == $this->sync_types[0]) {
-                    ?>
-                    <div class="two_way_pop_button">
-                        <input type="button" class="product_from_qbo button" value="Product from QuickBooks">
-                        <input type="button" class="product_to_qbo button" value="Product to QuickBooks">
-                    </div>
-
-                    <div class="sync_all_products_from_qbo pop_button">
-                        <input type="button" class="product_from_qbo button btn-yes" value="Yes">
-                        <input type="button" class="button btn-no" name="no" value="No">
-                    </div>
-
-                    <div class="sync_all_products_to_qbo pop_button">
-                        <input type="button" class="product_to_qbo button btn-yes" value="Yes">
-                        <input type="button" class="button btn-no" name="no" value="No">
-                    </div>
-
+                <div id="pop_up_btn_container">
                     <?php
-                } else if ($options['sync_type'] == $this->sync_types[1]) {
+                    //Button to be shown on product syncing settings page to sync
+                    if ($options['sync_type'] == $this->sync_types[0]) {
+                            ?>
+                            <div class="two_way_pop_button">
+                                <input type="button" class="product_from_qbo button" value="Product from QuickBooks">
+                                <input type="button" class="product_to_qbo button" value="Product to QuickBooks">
+                            </div>
+                            <?php
+
+                        ?>
+
+
+                        <div class="sync_all_products_from_qbo pop_button">
+                            <input type="button" class="product_from_qbo button btn-yes" value="Yes">
+                            <input type="button" class="button btn-no" name="no" value="No">
+                        </div>
+
+                        <div class="sync_all_products_to_qbo pop_button">
+                            <input type="button" class="product_to_qbo button btn-yes" value="Yes">
+                            <input type="button" class="button btn-no" name="no" value="No">
+                        </div>
+
+                        <?php
+                    } else if ($options['sync_type'] == $this->sync_types[1]) {
+                        ?>
+                        <div class="pop_button">
+                            <input type="button" class="product_from_qbo button btn-yes" value="Yes">
+                            <input type="button" class="button btn-no" name="no" value="No">
+                        </div>
+                        <?php
+                    }
                     ?>
-                    <div class="pop_button">
-                        <input type="button" class="product_from_qbo button btn-yes" value="Yes">
-                        <input type="button" class="button btn-no" name="no" value="No">
-                    </div>
-                    <?php
-                }
-                ?>
+                </div>
             </div>
+            <div class="ls-modal-backdrop close" ></div>
         </div>
 
         <?php
@@ -442,13 +442,13 @@ class LS_QBO_Product_Form
         <p <?php echo ($sync_type == $this->sync_types[2]) ? 'style="display: none;"' : ''; ?> id="syncing_bottons">
             <input type="button"
                    name="sync_reset_btn"
-                   title="Selecting the Sync Reset button resets linksync to update all WooCommerce products with data from Vend, based on your existing Product Sync Settings."
+                   title="Selecting the Sync Reset button resets linksync to update all WooCommerce products with data from QuickBooks, based on your existing Product Sync Settings."
                    value="Sync all products from QuickBooks"
                    class="button button-primary"
                    id="btn_sync_products_from_qbo">
 
             <input type="button" <?php echo ($sync_type == $this->sync_types[1]) ? 'style="display: none;"' : ''; ?>
-                   title="Selecting this option will sync your entire WooCommerce product catalogue to Vend, based on your existing Product Sync Settings. It takes 3-5 seconds to sync each product, depending on the performance of your server, and your geographic location."
+                   title="Selecting this option will sync your entire WooCommerce product catalogue to QuickBooks, based on your existing Product Sync Settings. It takes 3-5 seconds to sync each product, depending on the performance of your server, and your geographic location."
                    value="Sync all products to QuickBooks"
                    class="button button-primary"
                    id="btn_sync_products_to_qbo">

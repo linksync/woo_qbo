@@ -617,14 +617,6 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
         //if Discount option and Shipping option is not enabled
         $qbo_info['qbo_info'] = LS_QBO()->options()->getQuickBooksInfo();
 
-
-        $qbo_allow_discount = isset($qbo_info['qbo_info']['allowDiscount']) ? $qbo_info['qbo_info']['allowDiscount'] : false;
-        $qbo_allow_shipping = isset($qbo_info['qbo_info']['allowShipping']) ? $qbo_info['qbo_info']['allowShipping'] : false;
-        if (!$qbo_allow_discount || !$qbo_allow_shipping) {
-            LS_QBO()->show_shipping_and_discount_guide($qbo_info);
-            die();
-        }
-
         $match_with = $product_options->match_product_with();
         if ('sku' == $match_with) {
 

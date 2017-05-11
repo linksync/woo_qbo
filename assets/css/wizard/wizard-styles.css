@@ -48,3 +48,27 @@
 	width: 60%;
 	margin: 0 auto;
 }
+
+#order_sync_type_helper_message,
+#sales_type_helper_message,
+#sync_type_helper_message,
+.match_product_with_message,
+.helper-message-font-size-12{
+	font-size: 12px !important;
+}
+
+.sync-message{
+	width: 500px !important;
+	padding-top: 30px !important;
+	padding-right: 30px !important;
+	padding-left: 30px !important;
+}
+
+.sync-qbo-button{
+	width: 100%;
+}
+.sync-qbo-button-cont{
+	padding-right: 30px !important;
+	padding-left: 30px !important;
+	padding-bottom: 30px !important;
+}

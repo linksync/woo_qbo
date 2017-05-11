@@ -4,7 +4,7 @@
 	<input type="hidden" name="process" value="wizard" />
 	<input type="hidden" name="action" value="order-sync" />
 	<input type="hidden" name="synctype" value="qbo" />
-	<input type="hidden" name="nextpage" value="0" />
+	<input type="hidden" name="nextpage" value="<?php echo ('disabled' == $product_syncing_type) ? '0': '4';?>" />
 	<p class="form-holder">
 		<strong>Order syncing type</strong>
 		<select name="linksync[order_sync_type]" id="order_syncing_type" class="form-field">
@@ -24,7 +24,7 @@
 				<option <?php echo ('export_as_woo_sale' == $export_customer_data) ? 'selected': ''; ?> value="export_as_woo_sale">No</option>
 			<select>
 			<br>
-			<span>If No, customer will be exported as WooCommerce Sale</span>
+                <span class="helper-message-font-size-12">If No, customer will be exported as WooCommerce Sale.</span>
 		</p>
 
         <br/>
@@ -40,7 +40,7 @@
         <br/>
 		<p class="form-holder">
 			<strong style="margin-bottom: -2px;">Order Status</strong>
-            <span>Choose what order statuses should be used to trigger the syncing of WooCommerce orders to QuickBooks Online.</span><br/><br/>
+            <span class="helper-message-font-size-12">Choose what order statuses should be used to trigger the syncing of WooCommerce orders to QuickBooks Online.</span><br/><br/>
 
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-pending" type="checkbox">Pending Payment</label><br/>
 			<label><input name="linksync[order_woo_to_qbo_order_status][]" checked value="wc-processing" type="checkbox">Processing</label><br/>
@@ -100,7 +100,7 @@
             }
             var message = '';
             message =   '<b style="font-weight: bolder;">WooCommerce to QuickBooks</b> - orders created in WooCommerce will be synced to QuickBooks online.<br/>' +
-                        '<b style="font-weight: bolder;">Disabled</b> - orders will not be synced between WooCommerce and QuickBooks Online. See <a href=\'https://help.linksync.com/hc/en-us/articles/206438604-Order-Syncing-Settings\' target=\'_blank\'>Order Syncing Settings</a> for more info. ';
+                        '<b style="font-weight: bolder;">Disabled</b> - orders will not be synced between WooCommerce and QuickBooks Online. <br/>See <a href=\'https://help.linksync.com/hc/en-us/articles/206438604-Order-Syncing-Settings\' target=\'_blank\'>Order Syncing Settings</a> for more info. ';
             orderSyncTypeHelperMessage.html(message);
         }
         

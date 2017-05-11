@@ -418,6 +418,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
             include_once LS_INC_DIR . 'apps/qbo/constants/class-ls-qbo-item-type.php';
             include_once LS_INC_DIR . 'apps/qbo/constants/class-ls-qbo-receipt-type.php';
+            include_once LS_INC_DIR . 'apps/qbo/constants/class-ls-qbo-constant.php';
             include_once LS_INC_DIR . 'apps/ls-core-functions.php';
             include_once LS_INC_DIR . 'apps/class-ls-woo-tax.php';
             include_once LS_INC_DIR . 'apps/class-ls-woo-product.php';
@@ -480,7 +481,12 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                 if (isset($_GET['setting'])) {
                     if ($_GET['setting'] == 'product_config') {
 
+                        wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/ls-ajax.js', array('jquery'));
+                        wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
+                        wp_enqueue_script('ls-sync-all-buttons', LS_ASSETS_URL . 'js/ls-sync-buttons.js', array('jquery'));
                         wp_enqueue_script('ls-qbo-product-syncing', LS_ASSETS_URL . 'js/qbo-product-syncing.js', array('jquery'));
+
+                        wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
 
                     } elseif ($_GET['setting'] == 'order_config') {
 
@@ -489,8 +495,22 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                     }
                 } else {
                     //configuration tab
+                    wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/ls-ajax.js', array('jquery'));
+                    wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
+                    wp_enqueue_script('ls-sync-all-buttons', LS_ASSETS_URL . 'js/ls-sync-buttons.js', array('jquery'));
                     wp_enqueue_script('ls-qbo-configuration', LS_ASSETS_URL . 'js/qbo-configuration.js', array('jquery'));
+                    wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
+
+
+
                 }
+            }
+
+            if (isset($_GET['page']) && $_GET['page'] == 'linksync-wizard') {
+                if (isset($_GET['setting'])) {
+
+                }
+
             }
 
         }
@@ -630,15 +650,16 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
                         if (empty($edit_product_link)) {
                             $edit_product_link = get_edit_post_link($productHelper->getParendId());
                         }
+                        $post_status = $productHelper->getStatus();
 
-                        if ('trash' == $product->post->post_status) {
+                        if ('trash' == $post_status) {
                             $edit_product_link = admin_url('edit.php?post_status=trash&post_type=product&s=' . $productHelper->getSku());
                         }
                         ?>
                         <tr>
                             <td><?php echo '<a href="', $edit_product_link, '" target="_blank">' . $productHelper->getName() . '</a>'; ?></td>
                             <td><?php echo ($product_ref['meta_value'] == '') ? "Empty SKU('')" : $product_ref['meta_value']; ?></td>
-                            <td><?php echo $product->post->post_status; ?></td>
+                            <td><?php echo $post_status; ?></td>
                         </tr>
                         <?php
                     }

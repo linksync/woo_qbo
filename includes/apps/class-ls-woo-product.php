@@ -10,11 +10,11 @@ class LS_Woo_Product
         $simpleProductsSqlResult = $wpdb->get_results($simpleProductsSql, ARRAY_A);
 
         $variantProductSql = "SELECT ".$wpdb->posts.".* FROM $wpdb->posts 
-                                INNER JOIN wp_postmeta ON wp_postmeta.post_id = wp_posts.ID 
+                                INNER JOIN ".$wpdb->postmeta." ON ".$wpdb->postmeta.".post_id = ".$wpdb->posts.".ID 
                                 WHERE 
-                                    wp_posts.post_type = 'product_variation' AND 
-                                    wp_postmeta.meta_key = '_variation_description' AND 
-                                    CHAR_LENGTH(wp_postmeta.meta_value)> 4000 ";
+                                    ".$wpdb->posts.".post_type = 'product_variation' AND 
+                                    ".$wpdb->postmeta.".meta_key = '_variation_description' AND 
+                                    CHAR_LENGTH(".$wpdb->postmeta.".meta_value)> 4000 ";
 
         $variantProductSqlResult = $wpdb->get_results($variantProductSql, ARRAY_A);
         $productOver400LengthDescription = array_merge($simpleProductsSqlResult, $variantProductSqlResult);
