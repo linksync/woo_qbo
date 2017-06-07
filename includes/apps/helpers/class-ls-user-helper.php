@@ -7,9 +7,18 @@ class LS_User_Helper
         add_action('admin_notices', array($this, 'setUpLaidInfoMessage'));
     }
 
+    public static function update_button()
+    {
+        $update_button = '<a  href="https://my.linksync.com/index.php?m=dashboard" 
+                              target="_blank" 
+                              class="button button-primary" style="margin-top: -4px;">Click here to upgrade now</a>';
+
+        return $update_button;
+    }
+
     public static function setUpLaidInfoMessage()
     {
-        $message = LS_ApiController::get_current_laid_info();
+        $message = LS_QBO()->laid()->getCurrentLaid();
         $isFreeTrial = false;
         $service_status = '';
         $message_data = '';
@@ -30,9 +39,7 @@ class LS_User_Helper
             $user_message = ucfirst($message['userMessage']);
         }
 
-        $update_button = '<a  href="https://my.linksync.com/index.php?m=dashboard" 
-                              target="_blank" 
-                              class="button button-primary" style="margin-top: -4px;">Click here to upgrade now</a>';
+        $update_button = self::update_button();
 
         if (true == $isFreeTrial && isset($registrationDate)) {
             $registrationDate = trim($registrationDate);

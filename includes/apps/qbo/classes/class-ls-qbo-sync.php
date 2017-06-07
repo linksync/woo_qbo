@@ -552,8 +552,6 @@ class LS_QBO_Sync
         $tax_mapping = $order_option->tax_mapping();
         $total_discount = 0;
 
-        $primary_email_address = null;
-
         if (!empty($items)) {
 
             foreach ($items as $item) {
@@ -666,6 +664,11 @@ class LS_QBO_Sync
             );
         }
 
+        $site_admin_email = LS_QBO()->options()->get_current_admin_email();
+        /**
+         * Sets the default primary email in case if empty
+         */
+        $primary_email = !empty($site_admin_email) ? $site_admin_email : 'woocommerce_sale@linksync.com';
         $export_types = $order_option->get_all_export_type();
         if ($export_types[0] == $order_option->customer_export()) {
 
@@ -687,8 +690,8 @@ class LS_QBO_Sync
 
 
             $billing_address = array(
-                'firstName' => $filtered_billing_address['firstName'],
-                'lastName' => $filtered_billing_address['lastName'],
+                'firstName' => !empty($filtered_billing_address['firstName']) ? $filtered_billing_address['firstName'] : 'WooCommerce',
+                'lastName' => !empty($filtered_billing_address['lastName']) ? $filtered_billing_address['lastName'] : 'Sale',
                 'phone' => $filtered_billing_address['phone'],
                 'street1' => $filtered_billing_address['street1'],
                 'street2' => $filtered_billing_address['street2'],
@@ -697,7 +700,7 @@ class LS_QBO_Sync
                 'postalCode' => $filtered_billing_address['postalCode'],
                 'country' => $filtered_billing_address['country'],
                 'company' => $filtered_billing_address['company'],
-                'email_address' => $filtered_billing_address['email_address']
+                'email_address' => !empty($filtered_billing_address['email_address']) ? $filtered_billing_address['email_address'] : $primary_email
             );
 
             $filtered_shipping_address = apply_filters('woocommerce_order_formatted_shipping_address', array(
@@ -725,7 +728,24 @@ class LS_QBO_Sync
                 'country' => $filtered_shipping_address['country'],
                 'company' => $filtered_shipping_address['company']
             );
-            $primary_email = !empty($primary_email_address) ? $primary_email_address : $billing_address['email_address'];
+
+            $primary_email = !empty($billing_address['email_address']) ? $billing_address['email_address'] : $primary_email;
+        } else if ($export_types[1] == $order_option->customer_export()) {
+
+            $billing_address = array(
+                'firstName' => 'WooCommerce',
+                'lastName' => 'Sale',
+                'phone' => null,
+                'street1' => null,
+                'street2' => null,
+                'city' => null,
+                'state' => null,
+                'postalCode' => null,
+                'country' => null,
+                'company' => null,
+                'email_address' => $primary_email
+            );
+
         }
 
         //UTC Time
@@ -774,9 +794,6 @@ class LS_QBO_Sync
         }
 
         $products = !empty($products) ? $products : null;
-
-        $site_admin_email = LS_QBO()->options()->get_current_admin_email();
-        $primary_email = !empty($primary_email) ? $primary_email : $site_admin_email;
         $billing_address = !empty($billing_address) ? $billing_address : null;
         $delivery_address = !empty($delivery_address) ? $delivery_address : null;
 

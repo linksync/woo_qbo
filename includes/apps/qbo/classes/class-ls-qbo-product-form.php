@@ -276,7 +276,7 @@ class LS_QBO_Product_Form
 
         $accounts_error_message = LS_QBO()->options()->get_accounts_error_message();
         if ($accounts_error_message) {
-            LS_Notice_Message_Builder::notice($accounts_error_message);
+            LS_Message_Builder::notice($accounts_error_message);
         }
 
 
@@ -286,7 +286,7 @@ class LS_QBO_Product_Form
     {
         $require_sync = LS_QBO()->options()->is_require_syncing();
         if (!empty($require_sync)) {
-            LS_Notice_Message_Builder::notice($require_sync, 'error require-resync');
+            LS_Message_Builder::notice($require_sync, 'error require-resync');
         }
     }
 
@@ -304,7 +304,7 @@ class LS_QBO_Product_Form
             <div id="pop_up" class="ls-pop-ups ls-modal-content"
                  style="display: <?php echo $options['sync_type'] != $this->sync_types[2] ? $options['pop_up_style'] : 'none'; ?>">
                 <div class="close-container">
-                    <div class="ui-icon ui-icon-close close-reveal-modal btn-no" style="width: 16px;height: 17px;"></div>
+                    <div class="ui-icon ui-icon-close close-reveal-modal btn-no" style="width: 16px !important;height: 17px;"></div>
                 </div>
 
                 <div id="sync_progress_container" style="display: none;">

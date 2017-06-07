@@ -38,7 +38,7 @@ class LS_Woo_Order_Line_Item
             $this->orderid = $this->order->get_id();
         }
 
-        if (!LS_Vend_Helper::isWooVersionLessThan_2_4_15()) {
+        if (!LS_Helper::isWooVersionLessThan_2_4_15()) {
             $this->productOrderItem = new WC_Order_Item_Product($lineItemArray);
             $this->lineOrderItemTax = new WC_Order_Item_Tax($lineItemArray);
         }

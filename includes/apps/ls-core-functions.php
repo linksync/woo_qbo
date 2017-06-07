@@ -685,7 +685,7 @@ function ls_selected_order_status_to_trigger_sync(){
 }
 
 function get_qbo_id( $id ){
-    $laid = LS_ApiController::get_current_laid();
+    $laid = LS_QBO()->laid()->getCurrentLaid();
     if( !empty($laid) ){
         return str_replace( $laid, '', $id );
     }
@@ -715,7 +715,7 @@ if (!function_exists('get_vend_id')) {
 
     function get_vend_id($id)
     {
-        $laid = LS_ApiController::get_current_laid();
+        $laid = LS_QBO()->laid()->getCurrentLaid();
         if( !empty($laid) ){
             return str_replace( $laid, '', $id );
         }

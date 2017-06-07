@@ -229,10 +229,6 @@ class LS_QBO_Api{
 	 * @return array|null
 	 */
 	public function get_laid_info(){
-		$laid = LS_ApiController::get_current_laid();
-		if( !empty($laid) ){
-			return $this->api->get('laid');
-		}
-		return null;
+        return $this->api->get('laid');
 	}
 }

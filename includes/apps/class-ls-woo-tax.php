@@ -9,7 +9,7 @@ class LS_Woo_Tax{
         if (!empty($orderTax)) {
             foreach ($orderTax as $tax_label) {
                 $tax_line_item = new LS_Woo_Order_Line_Item($tax_label);
-                if (LS_Vend_Helper::isWooVersionLessThan_2_4_15()) {
+                if (LS_Helper::isWooVersionLessThan_2_4_15()) {
                     $rate_id = $tax_line_item->lineItem['rate_id'];
                 } else {
                     $wc_order_tax = new WC_Order_Item_Tax($tax_label);
@@ -41,7 +41,7 @@ class LS_Woo_Tax{
                     return '';//No tax was set up for shipping
                 }
 
-                if (LS_Vend_Helper::isWooVersionLessThan_2_4_15()) {
+                if (LS_Helper::isWooVersionLessThan_2_4_15()) {
                     $rate_id = $tax_line_item->lineItem['rate_id'];
                 } else {
                     $wc_order_tax = new WC_Order_Item_Tax($tax_label);

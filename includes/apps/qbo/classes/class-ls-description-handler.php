@@ -45,7 +45,7 @@ class LS_Description_Handler
             'two_way' == $productSyncingSyncType
         ) {
             $descriptionError = 'Your product description exceeds QuickBooks 4000 maximum character limit. If you are updating from WooCommerce, your product description will be trimmed down in Quickbooks. If you are updating from Quickbooks, it will not reflect in WooCommerce.';
-            LS_Notice_Message_Builder::notice($descriptionError);
+            LS_Message_Builder::notice($descriptionError);
             $is_toogled = LS_Description_Handler::is_tooggle_down();
 
             ?>

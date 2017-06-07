@@ -173,16 +173,17 @@ label {
 
 .btn-yes{
     color: green !important;
-    width: 90px;
-    font-weight: 900;
-    float: left;
+    width: 90px !important;
+    font-weight: 900 !important;
+    float: left !important;
+    cursor: pointer !important;
 }
 
 .btn-no{
     color: red !important;
-    width: 90px;
-    font-weight: 900;
-    cursor: pointer;
+    width: 90px !important;
+    font-weight: 900 !important;
+    cursor: pointer !important;
 }
 .pop_button{
     margin: auto;

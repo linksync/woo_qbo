@@ -27,12 +27,10 @@
 
             lsAjax.post(data, function (response) {
 
-                if (!$.isEmptyObject(response)) {
-
-                    if (!$.isEmptyObject(response.products)) {
-                        callback(response);
-                    }
+                if (typeof callback === "function") {
+                    callback(response);
                 }
+
             });
 
         },
@@ -56,6 +54,15 @@
 
             });
 
+        },
+
+        done_required_sync: function () {
+            var data = {
+                action: 'qbo_done_syncing_required'
+            };
+            lsAjax.post(data, function (data) {
+                $('.require-resync').hide();
+            });
         }
     }
 }(jQuery));

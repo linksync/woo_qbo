@@ -26,29 +26,49 @@ class Wizard_Model
 
     public static function apikey()
     {
-        $app_name_status = 'Inactive';
-        $status = 'Inactive';
-
         // Save and check valid laid api Key
         $apikey = $_POST['linksync']['api_key'];
-        if (!empty($apikey)) {
-            $res = LS_ApiController::check_api_key($apikey);
 
-            if (isset($res['connected_to'])) {
-                $nextpage = isset($_POST['nextpage']) ? $_POST['nextpage'] : 0;
-                if (is_numeric($nextpage) && $nextpage > 0) {
-                    wp_redirect(admin_url('admin.php?page=linksync-wizard&step=' . $nextpage));
-                    exit();
+        if (!empty($apikey)) {
+            $res = LS_QBO()->laid()->checkApiKey($apikey);
+
+
+            if (!empty($res['error_message'])) {
+                if (!empty($res['error_message']) && 'Connection to the update URL failed.' == $res['error_message']) {
+                    update_option('linksync_error_message', 'Connection to the update URL failed. Please check our <a href="https://help.linksync.com/hc/en-us/articles/115000591510-Connection-to-the-update-URL-failed" target="_blank">FAQ</a> section to find possible solutions.');
+                } else {
+                    $message = 'Invalid or Expired Api key.';
+                    $errorMessage = explode(',', $res['error_message']);
+
+                    if (!empty($errorMessage[1])) {
+
+                        if (true == LS_User_Helper::isFreeTrial(trim($errorMessage[2]))) {
+                            $message = 'Oops, it looks like your free trial has expired. Click here to upgrade to a paid plan. ' . LS_User_Helper::update_button();
+                        }
+
+                    }
+
+                    update_option('linksync_error_message', $message);
                 }
-            } else {
-                update_option('linksync_error_message', $res['lws_laid_key_info']['userMessage']);
+
                 wp_redirect(admin_url('admin.php?page=linksync-wizard'));
                 exit();
+            } else {
+                if (isset($res['connected_to'])) {
+                    $nextpage = isset($_POST['nextpage']) ? $_POST['nextpage'] : 0;
+                    if (is_numeric($nextpage) && $nextpage > 0) {
+                        wp_redirect(admin_url('admin.php?page=linksync-wizard&step=' . $nextpage));
+                        exit();
+                    }
+                }
             }
+
         } else {
+
             update_option('linksync_error_message', 'Please provide the valid API Key before proceeding to next step.');
             wp_redirect(admin_url('admin.php?page=linksync-wizard'));
             exit();
+
         }
     }
 
@@ -144,7 +164,7 @@ class Wizard_Model
 
         if ($synctype == 'qbo') {
             update_option('ls_osqbo_sync_type', $product_sync_type);
-            if('disabled' != $product_sync_type && $nextpage > 0){
+            if ('disabled' != $product_sync_type && $nextpage > 0) {
                 $url .= '-wizard&step=' . $nextpage;
             }
             switch ($product_sync_type) {
@@ -157,7 +177,7 @@ class Wizard_Model
             }
         } else {
             update_option('order_sync_type', $product_sync_type);
-            if('disabled_sync' != $product_sync_type && $nextpage > 0){
+            if ('disabled_sync' != $product_sync_type && $nextpage > 0) {
                 $url .= '-wizard&step=' . $nextpage;
             }
             switch ($product_sync_type) {

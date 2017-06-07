@@ -110,7 +110,7 @@ class LS_QBO_Account
                     UNIQUE `id` (`id`)
                 ) $this->charsetCollate;";
 
-        require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+        require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta( $sql );
 
         add_option('linksync_accounts_table_version', $this->tableVersion);

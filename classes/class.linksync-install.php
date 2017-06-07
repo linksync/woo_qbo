@@ -33,7 +33,7 @@ class Linksync_installation {
 					{
 						case 1:
 							// Set up API Key
-                            $laid = LS_ApiController::get_current_laid();
+                            $laid = LS_QBO()->laid()->getCurrentLaid();
 							include_once(LS_PLUGIN_DIR.'includes/view/wizard/setup-api.php');
 							break;
 							

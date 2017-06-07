@@ -389,6 +389,8 @@ class LS_Woo_Product
         $result = $wpdb->get_results("
 				SELECT
 						wposts.ID,
+						wposts.post_title AS product_name,
+						wposts.post_status AS product_status,
 						wpmeta.meta_key,
 						wpmeta.meta_value
 				FROM $wpdb->postmeta AS wpmeta
@@ -409,16 +411,16 @@ class LS_Woo_Product
 			", ARRAY_A);
 
         $real_sku_duplicate = array();
-        if(!empty($result)){
+        if (!empty($result)) {
             foreach ($result as $duplicateSku) {
                 $product_metas = LS_Woo_Product::get_post_meta($duplicateSku['ID'], $duplicateSku['meta_key'], $duplicateSku['meta_value']);
                 $count = count($product_metas);
 
-                if($count >= 2){
-                    if(isset($product_metas[0]['meta_id'])){
+                if ($count >= 2) {
+                    if (isset($product_metas[0]['meta_id'])) {
                         unset($product_metas[0]);
                     }
-                    foreach($product_metas as $product_meta){
+                    foreach ($product_metas as $product_meta) {
                         self::direct_db_post_meta_delete($product_meta['meta_id']);
                     }
                 } else {
@@ -442,8 +444,10 @@ class LS_Woo_Product
         $empty_skus = $wpdb->get_results("
 					SELECT
 							wposts.ID,
-							wpmeta.meta_key,
-							wpmeta.meta_value
+							wposts.post_title AS product_name,
+                            wposts.post_status AS product_status,
+                            wpmeta.meta_key,
+                            wpmeta.meta_value
 					FROM $wpdb->postmeta AS wpmeta
 					INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
 					WHERE wpmeta.meta_key = '_sku' AND wpmeta.meta_value = '' AND wposts.post_type IN('product','product_variation')

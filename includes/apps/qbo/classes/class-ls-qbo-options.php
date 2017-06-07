@@ -20,6 +20,26 @@ class LS_QBO_Options
         return self::$_instance;
     }
 
+    public function getConnectedTo()
+    {
+        return get_option('linksync_connectedto', '');
+    }
+
+    public function updateConnectedTo($value)
+    {
+        return update_option('linksync_connectedto', $value);
+    }
+
+    public function getConnectedWith()
+    {
+        return get_option('linksync_connectionwith', '');
+    }
+
+    public function updateConnectedWith($value)
+    {
+        return update_meta('linksync_connectionwith', $value);
+    }
+
     public function setTaxRateAndCodeObjects($lwsApiTaxCodesObject)
     {
         $modifiedTaxCodeAndTaxRateRef = array();

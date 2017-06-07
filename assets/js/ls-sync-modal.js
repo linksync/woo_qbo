@@ -37,6 +37,7 @@
                 complete: function () {
                     lsSyncModal.$progressBarLabel.text("Sync Completed!");
                     lsSyncModal.$dasboardLink.removeClass('hide');
+                    lsAjax.done_required_sync();
                 }
             });
         },
@@ -195,6 +196,9 @@
 
                             });
                         }
+                    } else {
+                        lsSyncModal.$progressBar.progressbar("value", 100);
+                        lsSyncModal.$progressBarLabel.html("No products from WooCommerce to export in QuickBooks Online");
                     }
                 } else {
                     lsSyncModal.$progressBar.progressbar("value", 100);
