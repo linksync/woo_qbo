@@ -99,5 +99,3 @@ class LS_QBO_Ajax
         wp_send_json(array('message' => 'done'));
     }
 }
-
-new LS_QBO_Ajax();

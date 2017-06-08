@@ -36,6 +36,12 @@ class LS_QBO_Product_Form
         $product_syncing = LS_QBO_Product_Form::instance();
         $product_options = LS_QBO()->product_option();
         $qbo_api = LS_QBO()->api();
+        $current_laid = LS_QBO()->laid()->getCurrentLaid();
+
+        if(empty($current_laid)){
+            LS_Message_Builder::error(LS_Constants::NOT_CONNECTED_MISSING_API_KEY);
+            die();
+        }
 
         $show_hide_pop_up = 'none';
         $user_options = null;
@@ -321,7 +327,7 @@ class LS_QBO_Product_Form
                             <div class="progress-label">Loading...</div>
                         </div>
                         <p class="form-holder hide ls-dashboard-link" >
-                            <a href="<?php echo admin_url('admin.php?page=linksync'); ?>" class="a-href-like-button">Go To Dashboard</a>
+                            <?php echo LS_User_Helper::linksync_settings_button(); ?>
                         </p>
                     </center>
                     <br/>

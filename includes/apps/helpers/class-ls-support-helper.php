@@ -136,5 +136,3 @@ class LS_Support_Helper
         <?php
     }
 }
-
-new LS_Support_Helper();

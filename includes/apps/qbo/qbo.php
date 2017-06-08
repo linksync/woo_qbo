@@ -1,11 +1,11 @@
 <?php if (!defined('ABSPATH')) exit('Access is Denied');
 
-/**
- * Check if WooCommerce is active
- */
-if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
 
+if (!class_exists('LS_QBO')) {
 
+    /**
+     * Class LS_QBO This class serves as the entry point for linksync for QuickBooks Online
+     */
     class LS_QBO
     {
 
@@ -24,40 +24,35 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function __construct()
         {
             $this->includes();
-            $this->load_hooks();
-
             do_action('ls_qbo_loaded');
         }
 
-        public function load_hooks()
+        /**
+         * This method is intended to run linksync QuickBooks Online plugin after including files
+         * to avoid code execution on including php files
+         */
+        public function run()
         {
-            $mainPluginFile = LS_PLUGIN_DIR . 'linksync.php';
-            register_activation_hook($mainPluginFile, array($this, 'qbo_install'));
-            add_action('plugins_loaded', array($this, 'qbo_plugin_loaded'));
-            /**
-             * Add Styles and Javascript files to wp-admin area
-             */
-            add_action('admin_enqueue_scripts', array($this, 'enqueue_scripts_and_styles'));
+
+            $in_woo_duplicate_skus = LS_Woo_Product::get_woo_duplicate_sku();
+            $in_woo_empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
+            $in_qbo_duplicate_and_empty_skus = LS_QBO()->api()->product()->get_duplicate_products();
+            LS_QBO()->options()->updateQuickBooksDuplicateProducts($in_qbo_duplicate_and_empty_skus);
+
+            $GLOBALS['in_woo_duplicate_skus'] = $in_woo_duplicate_skus;
+            $GLOBALS['in_woo_empty_product_skus'] = $in_woo_empty_product_skus;
+            $GLOBALS['in_qbo_duplicate_and_empty_skus'] = $in_qbo_duplicate_and_empty_skus['products'];
+
+            LS_QBO_Hook::init();
             $this->load_ajax_hooks();
-        }
 
-        /**
-         * Run on plugin activation
-         */
-        public function qbo_install()
-        {
-            $accounts = new LS_QBO_Account();
-            //$accounts->createTable();
-        }
-
-        /**
-         * Fires once if this plugin is active and is loaded
-         */
-        public function qbo_plugin_loaded()
-        {
-            $accounts = new LS_QBO_Account();
-            //$accounts->tableUpgrade();
-
+            new LS_Description_Handler();
+            new LS_User_Helper();
+            new LS_Support_Helper();
+            new LS_QBO_Sync();
+            new LS_Notice();
+            new LS_QBO_Ajax();
+            new LS_QBO_Menu();
         }
 
         public function load_ajax_hooks()
@@ -71,30 +66,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             add_action('wp_ajax_get_laid_info', array($this, 'get_qbo_laid_info'));
         }
 
-        public function show_notices_product_edit_screen()
-        {
-            global $typenow;
-            if ('product' == $typenow && isset($_GET['post'])) {
-                $product_id = (int)$_GET['post'];
-                $product = wc_get_product($product_id);
-                $sku = $product->get_sku();
-                $unique_sku = LS_Woo_Product::product_has_unique_sku($product_id, $sku);
-
-                $errors = null;
-                if (!$unique_sku) {
-                    $url = admin_url('edit.php?post_status=trash&post_type=product&s=' . $sku);
-                    $errors[] = 'Linksync detected that the SKU of this product existed in product trash. <a href="' . $url . '" target="_blank">Click here to view</a>';
-                } else if ('' == $sku) {
-                    $errors[] = 'Linksync detected that the SKU of this product is empty.';
-                }
-
-                if (!empty($errors)) {
-                    LS_QBO()->show_errors($errors);
-                }
-            }
-
-        }
-
         public function isLaidVersion11()
         {
             $currentLaidInfo = LS_QBO()->get_laid_info();
@@ -105,19 +76,6 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
             return false;
 
-        }
-
-        public function show_errors($errors)
-        {
-            ?>
-            <div id="ls_errors" class="error">
-                <?php
-                foreach ($errors as $error) {
-                    echo '<p>' . wp_kses_post($error) . '</p>';
-                }
-                ?>
-            </div>
-            <?php
         }
 
         /**
@@ -437,6 +395,8 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         public function includes()
         {
 
+
+
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-laid.php';
             include_once LS_INC_DIR . 'apps/qbo/constants/class-ls-qbo-item-type.php';
             include_once LS_INC_DIR . 'apps/qbo/constants/class-ls-qbo-receipt-type.php';
@@ -480,104 +440,21 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
             include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-helper.php';
             include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-product-helper.php';
             include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-order-helper.php';
+            include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-log-helper.php';
 
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-sync.php';
             include_once LS_INC_DIR . 'apps/class-ls-notice.php';
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-ajax.php';
             require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-menu.php';
             require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-view.php';
-            include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-account.php';
+            require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-notice.php';
+            require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-notice.php';
+            include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-scripts.php';
             include_once LS_INC_DIR . 'classes/class-ls-duplicate-sku-list.php';
             include_once LS_INC_DIR . 'apps/qbo/classes/list/class-ls-qbo-duplicate-sku-list.php';
+            include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-install.php';
+            include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-hooks.php';
 
-
-        }
-
-        /**
-         * Load QBO related styles and scripts
-         */
-        public function enqueue_scripts_and_styles()
-        {
-            //Check for linksync plugin page before adding the styles and scripts to wp-admin
-            $linkSyncQBOMenuId = LS_QBO_Menu::get_id();
-            $currentScreen = get_current_screen();
-            $currentScreenId = $currentScreen->id;
-
-            wp_enqueue_style('ls-qbo', LS_ASSETS_URL . 'css/qbo-styles.css');
-            wp_enqueue_script('ls-main-qbo-js', LS_ASSETS_URL . 'js/qbo.js', array('jquery'));
-
-            if ($linkSyncQBOMenuId == $currentScreenId) {
-
-                wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/ls-ajax.js', array('jquery'));
-
-                wp_enqueue_style('ls-styles', LS_ASSETS_URL . 'css/style.css');
-
-                //settings tab styles and scripts
-                wp_enqueue_style('ls-settings-tab', LS_ASSETS_URL . 'css/admin-tabs/ls-plugins-setting.css');
-                wp_enqueue_style('ls-reveal-style', LS_ASSETS_URL . 'css/admin-tabs/ls-reveal.css');
-                wp_enqueue_script('ls-tiptip-plugin', LS_ASSETS_URL . 'js/jquery-tiptip/jquery.tipTip.min.js', array('jquery'));
-                wp_enqueue_script('ls-reveal-script', LS_ASSETS_URL . 'js/jquery-tiptip/jquery.reveal.js', array('jquery'));
-                wp_enqueue_script('ls-jquery-ui-plugin', LS_ASSETS_URL . 'js/jquery-tiptip/jquery-ui.js', array('jquery'));
-                wp_enqueue_script('ls-custom-scripts', LS_ASSETS_URL . 'js/ls-custom.js', array('jquery'));
-
-                //ls-plugins-tab-configuration styles and scripts
-                wp_enqueue_style('ls-jquery-ui', LS_ASSETS_URL . 'css/jquery-ui/jquery-ui.css');
-                wp_enqueue_style('ls-tab-configuration-style', LS_ASSETS_URL . 'css/admin-tabs/ls-plugins-tab-configuration.css');
-
-                LS_Support_Helper::supportScripts();
-
-                $connected_to = get_option('linksync_connectedto');
-
-                $activeTabPage = LS_QBO_Menu::get_active_tab_page();
-
-                if (!empty($activeTabPage)) {
-
-                    if ('product_config' == $activeTabPage) {
-
-                        wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
-                        wp_enqueue_script('ls-sync-all-buttons', LS_ASSETS_URL . 'js/ls-sync-buttons.js', array('jquery'));
-                        wp_enqueue_script('ls-qbo-product-syncing', LS_ASSETS_URL . 'js/qbo-product-syncing.js', array('jquery'));
-
-                        wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
-
-                    } else if ('order_config' == $activeTabPage) {
-                        wp_enqueue_script('ls-qbo-product-syncing', LS_ASSETS_URL . 'js/qbo-order-syncing.js', array('jquery'));
-                    } else {
-                        //configuration tab
-                        wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
-                        wp_enqueue_script('ls-sync-all-buttons', LS_ASSETS_URL . 'js/ls-sync-buttons.js', array('jquery'));
-                        wp_enqueue_script('ls-qbo-configuration', LS_ASSETS_URL . 'js/qbo-configuration.js', array('jquery'));
-                        wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
-                    }
-
-                } else {
-                    //configuration tab
-                    wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
-                    wp_enqueue_script('ls-sync-all-buttons', LS_ASSETS_URL . 'js/ls-sync-buttons.js', array('jquery'));
-                    wp_enqueue_script('ls-qbo-configuration', LS_ASSETS_URL . 'js/qbo-configuration.js', array('jquery'));
-                    wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
-                }
-            }
-
-            if (isset($_GET['page']) && $_GET['page'] == 'linksync-wizard') {
-                add_action('admin_head', array('Wizard_Model', 'remove_all_admin_notices_during_wizard_process'));
-                wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/ls-ajax.js', array('jquery'));
-                wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
-                wp_enqueue_script('ls-sync-all-buttons', LS_ASSETS_URL . 'js/ls-sync-buttons.js', array('jquery'));
-                wp_enqueue_style('admin-linksync-style', LS_ASSETS_URL . 'css/wizard/wizard-styles.css');
-                wp_enqueue_script('ls-wizard-product-syncing', LS_ASSETS_URL . 'js/wizard-qbo-product-syncing.js', array('jquery', 'jquery-ui-core', 'jquery-ui-progressbar'));
-
-                if (isset($_GET['step']) && 4 == $_GET['step']) {
-                    wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
-                    wp_enqueue_style('ls-styles', LS_ASSETS_URL . 'css/style.css');
-                }
-
-            }
-
-            $screen = get_current_screen();
-            if ('shop_order' == $screen->id) {
-                wp_enqueue_script('ls-shop-order-scripts', LS_ASSETS_URL . 'js/ls-shop-order.js', array('jquery'));
-            }
 
         }
 
@@ -591,16 +468,16 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
         public function show_qbo_duplicate_products($list)
         {
-            $duplcateSkuListLink = ' <a target="_blank" href="' .LS_QBO_Menu::linksync_page_menu_url('duplicate_sku&section=in_quickbooks_online').'" > Click here</a>';
-            LS_Message_Builder::error('You have duplicate products or empty skus in your <a href="https://qbo.intuit.com/app/items" target="_blank">QuickBook Online</a>.'. $duplcateSkuListLink.' to view the list');
+            $duplcateSkuListLink = ' <a target="_blank" href="' . LS_QBO_Menu::linksync_page_menu_url('duplicate_sku&section=in_quickbooks_online') . '" > Click here</a>';
+            LS_Message_Builder::error('You have duplicate products or empty skus in your <a href="https://qbo.intuit.com/app/items" target="_blank">QuickBook Online</a>.' . $duplcateSkuListLink . ' to view the list');
         }
 
         public function show_woo_duplicate_products($list, $emptySkus = array(), $duplicateSkus = array())
         {
 
-            $wooCommerceProductListLink = '<a target="_blank" href="'.admin_url('edit.php?post_type=product').'">Woocommerce</a>. ';
-            $duplcateSkuListLink = ' <a target="_blank" href="' .LS_QBO_Menu::linksync_page_menu_url('duplicate_sku').'" > Click here</a>';
-            LS_Message_Builder::notice('You have duplicate or empty skus in your '.$wooCommerceProductListLink.$duplcateSkuListLink.' to view the list');
+            $wooCommerceProductListLink = '<a target="_blank" href="' . admin_url('edit.php?post_type=product') . '">Woocommerce</a>. ';
+            $duplcateSkuListLink = ' <a target="_blank" href="' . LS_QBO_Menu::linksync_page_menu_url('duplicate_sku') . '" > Click here</a>';
+            LS_Message_Builder::notice('You have duplicate or empty skus in your ' . $wooCommerceProductListLink . $duplcateSkuListLink . ' to view the list');
 
         }
 
@@ -649,8 +526,8 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
         {
             $laid = LS_QBO()->laid()->getCurrentLaid();
 
-            $webHookData['url'] = linksync::getWebHookUrl();
-            $webHookData['version'] = linksync::$version;
+            $webHookData['url'] = Linksync_QuickBooks::getWebHookUrl();
+            $webHookData['version'] = Linksync_QuickBooks::$version;
 
 
             $orderImport = 'no';
@@ -677,6 +554,9 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
 
     }
 
+}
+
+if (!function_exists('LS_QBO')) {
     /**
      * Returns the main instance of LS_QBO to prevent the need to use globals.
      */
@@ -684,9 +564,7 @@ if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_
     {
         return LS_QBO::instance();
     }
-
-    // Global for backwards compatibility.
-    $GLOBALS['ls_qbo'] = LS_QBO();
-
-    add_action('admin_notices', array(LS_QBO(), 'show_notices_product_edit_screen'));
 }
+
+
+

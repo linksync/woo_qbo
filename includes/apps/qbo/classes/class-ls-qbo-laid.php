@@ -296,7 +296,7 @@ class LS_QBO_Laid
     public function updateWebHookConnection($web_hook_data = null)
     {
 
-        $url = linksync::getWebHookUrl();
+        $url = Linksync_QuickBooks::getWebHookUrl();
         $webhookURL = isset($web_hook_data['url']) ? $web_hook_data['url'] : $url;
 
         $laid = null;
@@ -305,7 +305,7 @@ class LS_QBO_Laid
         }
         $web_hook_data = array(
             "url" => $webhookURL,
-            "version" => linksync::$version,
+            "version" => Linksync_QuickBooks::$version,
             "order_import" => isset($web_hook_data['order_import']) ? $web_hook_data['order_import'] : 'yes',
             "product_import" => isset($web_hook_data['product_import']) ? $web_hook_data['product_import'] : 'yes'
         );
@@ -327,6 +327,16 @@ class LS_QBO_Laid
 
         return false;
 
+    }
+
+    public function generate_code($length = 6)
+    {
+        $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        $randomString = '';
+        for ($i = 0; $i < $length; $i++) {
+            $randomString .= $characters[rand(0, strlen($characters) - 1)];
+        }
+        return $randomString;
     }
 }
 

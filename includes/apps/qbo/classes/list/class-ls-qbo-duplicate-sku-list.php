@@ -45,6 +45,11 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
         ));
     }
 
+    public function get_duplicate_and_empty_skus()
+    {
+        return $this->duplicate_and_empty_skus;
+    }
+
     public function column_default($item, $column_name)
     {
 
@@ -209,7 +214,6 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
          * be able to use your precisely-queried data immediately.
          */
         $data = $this->duplicate_and_empty_skus;
-
 
         /**
          * This checks for sorting input and sorts the data in our array accordingly.

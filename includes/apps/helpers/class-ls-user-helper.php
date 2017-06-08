@@ -16,6 +16,22 @@ class LS_User_Helper
         return $update_button;
     }
 
+    public static function wizard_button()
+    {
+        $wizard_button = '<a  href="' . LS_QBO_Menu::get_wizard_admin_menu_url() . '" 
+                              class="button button-primary">Run linksync wizard now</a>';
+
+        return $wizard_button;
+    }
+
+    public static function linksync_settings_button( $additional_class = null)
+    {
+        $settings_button = '<a  href="' . LS_QBO_Menu::get_linksync_admin_url() . '"
+                              class="a-href-like-button '.$additional_class.'">Go To Dashboard</a>';
+
+        return $settings_button;
+    }
+
     public static function setUpLaidInfoMessage()
     {
         $message = LS_QBO()->laid()->getCurrentLaid();
@@ -122,5 +138,3 @@ class LS_User_Helper
     }
 
 }
-
-new LS_User_Helper();

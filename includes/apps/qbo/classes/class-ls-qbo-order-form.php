@@ -591,8 +591,13 @@ If you\'re exporting orders from WooCommerce to QuickBooks Online, then use this
     {
         $order_form = LS_QBO_Order_Form::instance();
         $order_options = LS_QBO()->order_option();
-
         $product_options = LS_QBO()->product_option();
+        $current_laid = LS_QBO()->laid()->getCurrentLaid();
+
+        if(empty($current_laid)){
+            LS_Message_Builder::error(LS_Constants::NOT_CONNECTED_MISSING_API_KEY);
+            die();
+        }
 
         $qbo_api = LS_QBO()->api();
 

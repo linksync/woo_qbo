@@ -59,5 +59,3 @@ class LS_Notice
     }
 
 }
-
-new LS_Notice();

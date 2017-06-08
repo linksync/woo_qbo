@@ -20,6 +20,17 @@ class LS_QBO_Options
         return self::$_instance;
     }
 
+    public function save_woocommerce_version($wooVersion)
+    {
+        return self::instance()->update_option('wooversion', $wooVersion);
+    }
+
+    public function get_woocommerce_version()
+    {
+        return self::instance()->get_option('wooversion', '');
+    }
+
+
     public function getConnectedTo()
     {
         return get_option('linksync_connectedto', '');
@@ -37,7 +48,7 @@ class LS_QBO_Options
 
     public function updateConnectedWith($value)
     {
-        return update_meta('linksync_connectionwith', $value);
+        return update_option('linksync_connectionwith', $value);
     }
 
     public function setTaxRateAndCodeObjects($lwsApiTaxCodesObject)
@@ -326,15 +337,16 @@ class LS_QBO_Options
     }
 
     /**
-     * Uses Wordpress get_option
+     *  Uses Wordpress get_option
      *
      * @param $key
-     * @return mixed|void
+     * @param string $default
+     * @return mixed
      */
-    public function get_option($key)
+    public function get_option($key, $default = '')
     {
         $key = self::instance()->option_prefix . $key;
-        return get_option($key);
+        return get_option($key, $default);
     }
 
     /**

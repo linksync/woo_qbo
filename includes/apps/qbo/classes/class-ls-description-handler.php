@@ -115,5 +115,3 @@ class LS_Description_Handler
         }
     }
 }
-
-new LS_Description_Handler();

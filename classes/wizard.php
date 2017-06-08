@@ -3,6 +3,33 @@
 class Wizard_Model
 {
 
+    public static function wizard_process()
+    {
+        if (isset($_POST['process']) && $_POST['process'] == 'wizard') {
+            if (isset($_POST['action'])) {
+                Wizard_Model::processall();
+            }
+        }
+    }
+
+    public static function linksync_wizard()
+    {
+        $apikey = get_option('linksync_laid');
+        $response = false;
+        if (!empty($apikey)) {
+            $response['connected_to'] = LS_QBO()->options()->getConnectedTo();
+        }
+
+        if (empty($apikey) && isset($_GET['step']) && $_GET['step'] > 1) {
+            update_option('linksync_error_message', 'Please provide the valid API Key before proceeding to next step.');
+            wp_redirect(LS_QBO_Menu::get_wizard_admin_menu_url());
+            exit();
+        }
+
+        // Display UI
+        Linksync_installation::wizard_handler($response);
+    }
+
     public static function processall()
     {
         if (isset($_POST['action']) && $_POST['action'] == 'apikey') {
@@ -51,13 +78,13 @@ class Wizard_Model
                     update_option('linksync_error_message', $message);
                 }
 
-                wp_redirect(admin_url('admin.php?page=linksync-wizard'));
+                wp_redirect(LS_QBO_Menu::get_wizard_admin_menu_url());
                 exit();
             } else {
                 if (isset($res['connected_to'])) {
                     $nextpage = isset($_POST['nextpage']) ? $_POST['nextpage'] : 0;
                     if (is_numeric($nextpage) && $nextpage > 0) {
-                        wp_redirect(admin_url('admin.php?page=linksync-wizard&step=' . $nextpage));
+                        wp_redirect(LS_QBO_Menu::get_wizard_admin_menu_url('step=' . $nextpage));
                         exit();
                     }
                 }
@@ -66,7 +93,7 @@ class Wizard_Model
         } else {
 
             update_option('linksync_error_message', 'Please provide the valid API Key before proceeding to next step.');
-            wp_redirect(admin_url('admin.php?page=linksync-wizard'));
+            wp_redirect(LS_QBO_Menu::get_active_linksync_page());
             exit();
 
         }
@@ -148,7 +175,7 @@ class Wizard_Model
 
         $nextpage = isset($_POST['nextpage']) ? $_POST['nextpage'] : 0;
         if (is_numeric($nextpage) && $nextpage > 0) {
-            wp_redirect(admin_url('admin.php?page=linksync-wizard&step=' . $nextpage));
+            wp_redirect(LS_QBO_Menu::get_wizard_admin_menu_url('step=' . $nextpage));
             exit();
         }
     }
@@ -159,13 +186,13 @@ class Wizard_Model
         $data = $_POST['linksync'];
         $product_option = null;
         $product_sync_type = isset($data['order_sync_type']) ? $data['order_sync_type'] : 'disabled';
-        $url = admin_url('admin.php?page=linksync');
+        $url = '';
         $nextpage = !empty($_POST['nextpage']) ? $_POST['nextpage'] : 0;
 
         if ($synctype == 'qbo') {
             update_option('ls_osqbo_sync_type', $product_sync_type);
             if ('disabled' != $product_sync_type && $nextpage > 0) {
-                $url .= '-wizard&step=' . $nextpage;
+                $url = 'step=' . $nextpage;
             }
             switch ($product_sync_type) {
                 case 'woo_to_qbo':
@@ -175,24 +202,14 @@ class Wizard_Model
                     LS_QBO()->order_option()->update_order_number($data['order_woo_to_qbo_order_number']);
                     break;
             }
-        } else {
-            update_option('order_sync_type', $product_sync_type);
-            if ('disabled_sync' != $product_sync_type && $nextpage > 0) {
-                $url .= '-wizard&step=' . $nextpage;
-            }
-            switch ($product_sync_type) {
-                case 'vend_to_wc-way':
-                    update_option('vend_to_wc_customer', $data['order_vend_to_woo_import_customer']);
-                    update_option('order_vend_to_wc', $data['order_vend_to_woo_order_status']);
-                    break;
-                case 'wc_to_vend':
-                    update_option('wc_to_vend_export', $data['order_woo_to_vend_export_customer']);
-                    update_option('order_status_wc_to_vend', $data['order_woo_to_vend_order_status']);
-                    break;
-            }
         }
 
-        wp_redirect($url);
+        if (empty($url)) {
+            wp_redirect(LS_QBO_Menu::get_linksync_admin_url());
+        } else {
+            wp_redirect(LS_QBO_Menu::get_wizard_admin_menu_url($url));
+        }
+
         exit();
     }
 

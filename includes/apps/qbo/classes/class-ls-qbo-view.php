@@ -5,7 +5,7 @@ class LS_QBO_View
 
     public function display()
     {
-        global $currentScreenId, $linkSyncQBOMenuId;
+        global $currentScreenId, $linkSyncQBOMenuId, $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_qbo_duplicate_and_empty_skus;
 
         if ($linkSyncQBOMenuId == $currentScreenId) {
             $subPage = LS_QBO_Menu::get_active_tab_page();
@@ -41,7 +41,12 @@ class LS_QBO_View
             } else {
 
                 if ('duplicate_sku' == $linksyncPage) {
-                    $this->display_duplicate_sku_list();
+                    if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_qbo_duplicate_and_empty_skus)) {
+                        $this->display_duplicate_sku_list();
+                    } else {
+                        $this->display_configuration_tab();
+                    }
+
                 } else {
                     $this->display_configuration_tab();
 
@@ -53,46 +58,41 @@ class LS_QBO_View
 
     public function display_duplicate_sku_list()
     {
+        global $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_qbo_duplicate_and_empty_skus;
+
         $duplicateSkuList = new LS_QBO_Duplicate_Sku_List();
         $active_section = LS_QBO_Menu::get_active_section();
 
-        if(empty($active_section) || 'in_woocommerce' == $active_section){
-            $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
-            $empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
+        if (empty($active_section) || 'in_woocommerce' == $active_section) {
 
             $duplicateSkuList = new LS_Duplicate_Sku_List(array(
-                'duplicate_products' => $duplicate_products,
-                'empty_product_skus' => $empty_product_skus,
+                'duplicate_products' => $in_woo_duplicate_skus,
+                'empty_product_skus' => $in_woo_empty_product_skus,
             ));
         }
 
-        if('in_quickbooks_online' == $active_section){
-            $duplicate_and_empty_skus = LS_QBO()->api()->product()->get_duplicate_products();
-            LS_QBO()->options()->updateQuickBooksDuplicateProducts($duplicate_and_empty_skus);
-
+        if ('in_quickbooks_online' == $active_section) {
             $duplicateSkuList = new LS_QBO_Duplicate_Sku_List(array(
-                'duplicate_and_empty_skus' => $duplicate_and_empty_skus['products'],
+                'duplicate_and_empty_skus' => $in_qbo_duplicate_and_empty_skus,
             ));
         }
-
-
 
 
         //Fetch, prepare, sort, and filter our data...
         $duplicateSkuList->prepare_items();
         $mainDuplicateSkuListUrl = LS_QBO_Menu::admin_url(LS_QBO_Menu::linksync_page_menu_url('duplicate_sku'));
-        if('in_quickbooks_online' == $active_section){
+        if ('in_quickbooks_online' == $active_section) {
             ?>
             <style>
-                #frm-duplicate-skus .bulkactions{
+                #frm-duplicate-skus .bulkactions {
                     display: none !important;
                 }
             </style>
             <?php
         }
-        if(!empty($duplicate_and_empty_skus) || !empty($duplicate_products) || !empty($empty_product_skus)){
+        if (!empty($duplicate_and_empty_skus) || !empty($duplicate_products) || !empty($empty_product_skus)) {
             $linkToKnowledgeBase = '<a target="_blank" href="https://help.linksync.com/hc/en-us/articles/115000710830-What-if-I-have-duplicate-SKUs-in-either-or-both-systems-"> click here</a>.';
-            LS_Message_Builder::notice("You have duplicate or empty skus. Please update your skus to make it unique. For more information ".$linkToKnowledgeBase);
+            LS_Message_Builder::notice("You have duplicate or empty skus. Please update your skus to make it unique. For more information " . $linkToKnowledgeBase);
         }
 
         ?>
@@ -101,11 +101,13 @@ class LS_QBO_View
             <h2>Duplicate SKU List</h2>
             <ul class="subsubsub">
                 <li><a href="<?php echo $mainDuplicateSkuListUrl . '&section=in_woocommerce'; ?>"
-                       class="<?php echo (empty($active_section) || 'in_woocommerce' == $active_section) ?  'current': ''; ?>">In WooCommerce</a> |
+                       class="<?php echo (empty($active_section) || 'in_woocommerce' == $active_section) ? 'current' : ''; ?>">In
+                        WooCommerce</a> |
                 </li>
                 <li>
                     <a href="<?php echo $mainDuplicateSkuListUrl . '&section=in_quickbooks_online'; ?>"
-                       class="<?php echo ('in_quickbooks_online' == $active_section) ?  'current': ''; ?>">In QuickBooks Online</a> |
+                       class="<?php echo ('in_quickbooks_online' == $active_section) ? 'current' : ''; ?>">In QuickBooks
+                        Online</a> |
                 </li>
             </ul>
             <br/><br/>
@@ -240,7 +242,22 @@ class LS_QBO_View
 
     public function settings_header()
     {
-        ?><h2>Linksync (Version: <?php echo linksync::$version; ?>)</h2><?php
+        ?><h2>Linksync (Version: <?php echo Linksync_QuickBooks::$version; ?>)</h2><?php
+    }
+
+    /**
+     * Add Settings link in the plugin list view for this vend plugin
+     *
+     * @param $links
+     * @return array
+     */
+    public function plugin_action_links($links)
+    {
+        $action_links = array(
+            'settings' => '<a href="' . admin_url('admin.php?page=' . LS_QBO::$slug) . '" title="' . esc_attr(__('View Linksync Settings', LS_QBO::$slug)) . '">' . __('Settings', LS_QBO::$slug) . '</a>',
+        );
+
+        return array_merge($action_links, $links);
     }
 
 }

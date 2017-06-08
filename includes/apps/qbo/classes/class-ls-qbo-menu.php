@@ -5,8 +5,14 @@ class LS_QBO_Menu
 
     public function __construct()
     {
-        add_action('admin_menu', array($this, 'initialize_admin_menu'));
-        add_action('admin_head', array($this, 'remove_first_sub_menu'));
+        /**
+         * Check if WooCommerce if active before showing plugin menu
+         */
+        if (in_array('woocommerce/woocommerce.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+            add_action('admin_menu', array($this, 'initialize_admin_menu'));
+            add_action('admin_head', array($this, 'remove_first_sub_menu'));
+        }
+
         add_action('admin_footer', array($this, 'footer_scripts'));
     }
 
@@ -46,7 +52,7 @@ class LS_QBO_Menu
 
     public static function get_active_section()
     {
-        if(isset($_REQUEST['section'])){
+        if (isset($_REQUEST['section'])) {
             return $_REQUEST['section'];
         }
 
@@ -128,15 +134,15 @@ class LS_QBO_Menu
         return self::tab_menu_url($subPage);
     }
 
-    public static function menu_url($page_slug, $tab = null, $section = null)
+    public static function menu_url($page_slug = null, $tab = null, $section = null)
     {
-        $url = 'admin.php?page=' . $page_slug;
+        $url = 'admin.php?page=' . (empty($page_slug) ? LS_QBO::$slug : $page_slug);
 
         if (null != $tab) {
             $url .= '&tab=' . $tab;
         }
 
-        if(null != $section){
+        if (null != $section) {
             $url .= '&section=' . $section;
         }
 
@@ -148,6 +154,12 @@ class LS_QBO_Menu
         return admin_url($url);
     }
 
+    public static function page_menu_url($page)
+    {
+        $url = 'admin.php?page=' . $page;
+        return $url;
+    }
+
     public static function linksync_page_menu_url($linksync_page_slug = null)
     {
         $url = 'admin.php?page=' . LS_QBO::$slug;
@@ -156,6 +168,17 @@ class LS_QBO_Menu
         }
 
         return $url;
+    }
+
+    public static function get_linksync_admin_url()
+    {
+        return self::admin_url(self::page_menu_url(LS_QBO::$slug));
+    }
+
+    public static function get_wizard_admin_menu_url($endpoint = null)
+    {
+        $endpoint = empty($endpoint) ? '' : '&' . $endpoint;
+        return self::admin_url(self::page_menu_url('linksync-wizard' . $endpoint));
     }
 
     public static function tab_menu_url($setting = null)
@@ -177,6 +200,8 @@ class LS_QBO_Menu
 
     public function initialize_admin_menu()
     {
+        global $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_qbo_duplicate_and_empty_skus;
+
         $menu_slug = LS_QBO::$slug;
 
         add_menu_page(
@@ -225,14 +250,17 @@ class LS_QBO_Menu
 //            null
 //        );
 
-        add_submenu_page(
-            $menu_slug,
-            __('linksync Duplicate SKU', $menu_slug),
-            __('Duplicate SKU', $menu_slug),
-            'manage_options',
-            self::linksync_page_menu_url('duplicate_sku'),
-            null
-        );
+
+        if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_qbo_duplicate_and_empty_skus)) {
+            add_submenu_page(
+                $menu_slug,
+                __('linksync Duplicate SKU', $menu_slug),
+                __('Duplicate SKU', $menu_slug),
+                'manage_options',
+                self::linksync_page_menu_url('duplicate_sku'),
+                null
+            );
+        }
 
         add_submenu_page(
             $menu_slug,
@@ -250,6 +278,15 @@ class LS_QBO_Menu
             'manage_options',
             self::tab_menu_url('logs'),
             null
+        );
+
+        $wizard_page = add_submenu_page(
+            null,
+            'linksync wizard',
+            'linksync wizard',
+            'manage_options',
+            'linksync-wizard',
+            array('Wizard_Model', 'linksync_wizard')
         );
 
     }
@@ -291,6 +328,4 @@ class LS_QBO_Menu
     }
 
 }
-
-new LS_QBO_Menu();
 

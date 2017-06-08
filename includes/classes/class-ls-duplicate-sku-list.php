@@ -30,12 +30,19 @@ class LS_Duplicate_Sku_List extends WP_List_Table
             $this->empty_skus = $args['empty_product_skus'];
         }
 
+        $this->duplicate_and_empty_skus = array_merge((array)$this->duplicate_skus, (array)$this->empty_skus);
+
         //Set parent defaults
         parent::__construct(array(
             'singular' => 'sku',
             'plural' => 'skus',
             'ajax' => true
         ));
+    }
+
+    public function get_duplicate_and_empty_skus()
+    {
+        return $this->duplicate_and_empty_skus;
     }
 
     public function column_default($item, $column_name)
@@ -265,7 +272,7 @@ class LS_Duplicate_Sku_List extends WP_List_Table
          * use sort and pagination data to build a custom query instead, as you'll
          * be able to use your precisely-queried data immediately.
          */
-        $data = array_merge($this->duplicate_skus, $this->empty_skus);
+        $data = array_merge((array)$this->duplicate_skus, (array)$this->empty_skus);
 
 
         /**

@@ -1210,5 +1210,3 @@ class LS_QBO_Sync
     }
 
 }
-
-new LS_QBO_Sync();
