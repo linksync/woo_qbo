@@ -38,7 +38,7 @@ class LS_QBO_Product_Form
         $qbo_api = LS_QBO()->api();
         $current_laid = LS_QBO()->laid()->getCurrentLaid();
 
-        if(empty($current_laid)){
+        if (empty($current_laid)) {
             LS_Message_Builder::error(LS_Constants::NOT_CONNECTED_MISSING_API_KEY);
             die();
         }
@@ -79,28 +79,28 @@ class LS_QBO_Product_Form
         $user_options['income_accounts'] = LS_QBO()->options()->getIncomeAccounts();
         $user_options['qbo_tax_classes'] = LS_QBO()->options()->getQuickBooksTaxClasses();
 
+        $duplicateSkuCheck = false;
         if ('disabled' != $user_options['sync_type']) {
 
             if ('sku' == $user_options['match_product_with']) {
 
-                $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
-                $emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();
-                $products_data = array_merge($duplicate_products, $emptyProductSkus);
+
+                $products_data = LS_Product_Helper::get_woocommerce_duplicate_or_empty_skus();
                 if (count($products_data) > 0) {
-                    LS_QBO()->show_woo_duplicate_products($products_data, $emptyProductSkus, $duplicate_products);
-                    die();
+                    LS_QBO()->show_woo_duplicate_products($products_data);
+                    $duplicateSkuCheck = true;
                 }
 
                 $qbo_duplicate = LS_QBO()->options()->getQuickBooksDuplicateProducts();
                 if (!empty($qbo_duplicate['products'])) {
-                    LS_QBO()->show_qbo_duplicate_products($qbo_duplicate['products']);
-                    die();
+                    LS_QBO()->show_qbo_duplicate_products();
+                    $duplicateSkuCheck = true;
                 }
 
             }
 
             if (empty($user_options['qbo_tax_classes'])) {
-                LS_QBO()->show_configure_tax_error();
+                LS_Notice_Message_Builder::notice(LS_QBO()->show_configure_tax_error());
                 die();
             }
 
@@ -108,7 +108,7 @@ class LS_QBO_Product_Form
 
 
         $product_syncing->set_users_options($user_options);
-        if (empty($accounts_error)) {
+        if (empty($accounts_error) && false == $duplicateSkuCheck) {
             $product_syncing->confirm_sync();
         }
 
@@ -120,9 +120,11 @@ class LS_QBO_Product_Form
         $product_syncing->form_header();
         $product_syncing->sync_type();
 
-        echo '<div id="ls-qbo-product-syncing-settings" ', $hide_on_disabled, '>';
 
-        $product_syncing->sync_bottons();
+        echo '<div id="ls-qbo-product-syncing-settings" ', $hide_on_disabled, '>';
+        if(false == $duplicateSkuCheck) {
+            $product_syncing->sync_bottons();
+        }
         echo '<table class="form-table"><tbody>';
 
         $product_syncing->match_product_with();
@@ -301,62 +303,84 @@ class LS_QBO_Product_Form
         $this->options = $option;
     }
 
-    public function confirm_sync()
+    public function confirm_sync($duplicate_or_empty_skus = null)
     {
         $options = $this->options;
-
-        ?>
-        <div class="ls-sync-modal" sync-type="<?php echo $options['sync_type']; ?>">
-            <div id="pop_up" class="ls-pop-ups ls-modal-content"
-                 style="display: <?php echo $options['sync_type'] != $this->sync_types[2] ? $options['pop_up_style'] : 'none'; ?>">
-                <div class="close-container">
-                    <div class="ui-icon ui-icon-close close-reveal-modal btn-no" style="width: 16px !important;height: 17px;"></div>
-                </div>
-
-                <div id="sync_progress_container" style="display: none;">
-
+        if (!empty($duplicate_or_empty_skus) || count($duplicate_or_empty_skus) > 0) {
+            ?>
+            <div class="ls-sync-modal" sync-type="<?php echo $options['sync_type']; ?>">
+                <div id="pop_up" class="ls-pop-ups ls-modal-content"
+                     style="display: <?php echo $options['sync_type'] != $this->sync_types[2] ? $options['pop_up_style'] : 'none'; ?>">
+                    <div style="float: right;">
+                        <div class="ui-icon ui-icon-close close-reveal-modal btn-no"
+                             style="width: 16px !important;height: 17px;"></div>
+                    </div>
                     <center>
                         <br/>
-                        <div id="syncing_loader">
-                            <p style="font-weight: bold;">Please do not close or refresh the browser while syncing is in progress.</p>
-                        </div>
+                        <h4 style="color: red;"><?php echo LS_QBO_Helper::duplicate_sku_message(); ?></h4>
                     </center>
-                    <center>
-                        <div>
-                            <div id="progressbar"></div>
-                            <div class="progress-label">Loading...</div>
-                        </div>
-                        <p class="form-holder hide ls-dashboard-link" >
-                            <?php echo LS_User_Helper::linksync_settings_button(); ?>
-                        </p>
-                    </center>
-                    <br/>
 
                 </div>
+                <div class="ls-modal-backdrop close"></div>
+            </div>
+            <?php
+        } else {
+            ?>
+            <div class="ls-sync-modal" sync-type="<?php echo $options['sync_type']; ?>">
+                <div id="pop_up" class="ls-pop-ups ls-modal-content"
+                     style="display: none;">
+                    <div class="close-container">
+                        <div class="ui-icon ui-icon-close close-reveal-modal btn-no"
+                             style="width: 16px !important;height: 17px;float: right;"></div>
+                    </div>
 
-                <div id="popup_message">
-                    <center>
-                        <div>
-                            <h4 id="sync_pop_up_msg" class="modal-message">Your products from QuickBooks Online will be imported to WooCommerce.<br/>
-                                Do you wish to continue?</h4>
-                        </div>
+                    <div id="sync_progress_container" style="display: none;">
 
-                    </center>
-                </div>
-
-
-                <div id="pop_up_btn_container">
-                    <?php
-                    //Button to be shown on product syncing settings page to sync
-                    if ($options['sync_type'] == $this->sync_types[0]) {
-                            ?>
-                            <div class="two_way_pop_button">
-                                <input type="button" class="product_from_qbo button" value="Product from QuickBooks">
-                                <input type="button" class="product_to_qbo button" value="Product to QuickBooks">
+                        <center>
+                            <br/>
+                            <div id="syncing_loader">
+                                <p style="font-weight: bold;">Please do not close or refresh the browser while syncing
+                                    is in
+                                    progress.</p>
                             </div>
-                            <?php
+                        </center>
+                        <center>
+                            <div>
+                                <div id="progressbar"></div>
+                                <div class="progress-label">Loading...</div>
+                            </div>
+                            <p class="form-holder hide ls-dashboard-link">
+                                <?php
+                                $currentPage = LS_QBO_Menu::get_active_page();
+                                if ($currentPage == 'linksync-wizard') {
+                                    echo LS_User_Helper::linksync_settings_button();
+                                }
+                                ?>
+                            </p>
+                        </center>
+                        <br/>
 
-                        ?>
+                    </div>
+
+                    <div id="popup_message">
+                        <center>
+                            <div>
+                                <h4 id="sync_pop_up_msg" class="modal-message">Your products from QuickBooks Online will
+                                    be
+                                    imported to WooCommerce.<br/>
+                                    Do you wish to continue?</h4>
+                            </div>
+
+                        </center>
+                    </div>
+
+
+                    <div id="pop_up_btn_container">
+
+                        <div class="two_way_pop_button pop_button" style="width: 401px;">
+                            <input type="button" class="product_from_qbo button" value="Product from QuickBooks">
+                            <input type="button" class="product_to_qbo button" value="Product to QuickBooks">
+                        </div>
 
 
                         <div class="sync_all_products_from_qbo pop_button">
@@ -369,27 +393,18 @@ class LS_QBO_Product_Form
                             <input type="button" class="button btn-no" name="no" value="No">
                         </div>
 
-                        <?php
-                    } else if ($options['sync_type'] == $this->sync_types[1]) {
-                        ?>
-                        <div class="pop_button">
-                            <input type="button" class="product_from_qbo button btn-yes" value="Yes">
-                            <input type="button" class="button btn-no" name="no" value="No">
-                        </div>
-                        <?php
-                    }
-                    ?>
+                    </div>
                 </div>
+                <div class="ls-modal-backdrop close"></div>
             </div>
-            <div class="ls-modal-backdrop close" ></div>
-        </div>
 
-        <?php
+            <?php
+        }
     }
 
     public function form_header()
     {
-        echo '<h3>', $this->header_title, '</h3>';
+
     }
 
     /**
@@ -399,42 +414,53 @@ class LS_QBO_Product_Form
     {
         $sync_type = $this->options['sync_type'];
         ?>
-        <fieldset>
-            <legend>Product Syncing Type</legend>
-            <p>
-                <input
-                    <?php echo ($sync_type == $this->sync_types[0]) ? 'checked' : ''; ?>
-                        name="product_sync_type" type="radio" id="ls-qbo-two-way"
-                        value="<?php echo $this->sync_types[0]; ?>">
-                <label for="ls-qbo-two-way">Two-way</label>
-                <?php
-                help_link(array(
-                    'title' => 'With this option, product data is kept in sync between both systems, so changes to products and inventory can be made in either your WooCommerce or QuickBooks Online store and those changes will be synced to the other store within a few moments.'
-                ));
-                ?>
+        <br/>
+        <table class="wp-list-table widefat fixed">
+            <thead>
+            <tr>
+                <td><strong>Product Syncing Type</strong></td>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <p>
+                        <input
+                            <?php echo ($sync_type == $this->sync_types[0]) ? 'checked' : ''; ?>
+                                name="product_sync_type" type="radio" id="ls-qbo-two-way"
+                                value="<?php echo $this->sync_types[0]; ?>">
+                        <label for="ls-qbo-two-way">Two-way</label>
+                        <?php
+                        help_link(array(
+                            'title' => 'With this option, product data is kept in sync between both systems, so changes to products and inventory can be made in either your WooCommerce or QuickBooks Online store and those changes will be synced to the other store within a few moments.'
+                        ));
+                        ?>
 
-                <input
-                    <?php echo ($sync_type == $this->sync_types[1]) ? 'checked' : ''; ?>
-                        name="product_sync_type" type="radio" id="ls-qbo-to-woo"
-                        value="<?php echo $this->sync_types[1]; ?>">
-                <label for="ls-qbo-to-woo">QuickBooks to WooCommerce</label>
-                <?php
-                help_link(array(
-                    'title' => 'With this option, QuickBooks Online is the \'master\' when it comes to managing product and inventory, and product updates are one-way, from QuickBooks Online to Woocommerce - product and inventory data does not update back to QuickBooks Online from WooCommerce.'
-                ));
-                ?>
-                <input
-                    <?php echo ($sync_type == $this->sync_types[2]) ? 'checked' : ''; ?>
-                        name="product_sync_type" type="radio" id="ls-qbo-disabled"
-                        value="<?php echo $this->sync_types[2]; ?>">
-                <label for="ls-qbo-disabled">Disabled</label>
-                <?php
-                help_link(array(
-                    'title' => 'Use the Disable option to prevent any product syncing from taking place between your QuickBooks Online and Woocommerce.'
-                ));
-                ?>
-            </p>
-        </fieldset>
+                        <input
+                            <?php echo ($sync_type == $this->sync_types[1]) ? 'checked' : ''; ?>
+                                name="product_sync_type" type="radio" id="ls-qbo-to-woo"
+                                value="<?php echo $this->sync_types[1]; ?>">
+                        <label for="ls-qbo-to-woo">QuickBooks to WooCommerce</label>
+                        <?php
+                        help_link(array(
+                            'title' => 'With this option, QuickBooks Online is the \'master\' when it comes to managing product and inventory, and product updates are one-way, from QuickBooks Online to Woocommerce - product and inventory data does not update back to QuickBooks Online from WooCommerce.'
+                        ));
+                        ?>
+                        <input
+                            <?php echo ($sync_type == $this->sync_types[2]) ? 'checked' : ''; ?>
+                                name="product_sync_type" type="radio" id="ls-qbo-disabled"
+                                value="<?php echo $this->sync_types[2]; ?>">
+                        <label for="ls-qbo-disabled">Disabled</label>
+                        <?php
+                        help_link(array(
+                            'title' => 'Use the Disable option to prevent any product syncing from taking place between your QuickBooks Online and Woocommerce.'
+                        ));
+                        ?>
+                    </p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
         <?php
     }
 

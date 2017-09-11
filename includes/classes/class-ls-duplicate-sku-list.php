@@ -153,7 +153,7 @@ class LS_Duplicate_Sku_List extends WP_List_Table
                     <input id="set-sku-automatically"
                            class="button button-primary button-large "
                            type="submit"
-                           name="setskuautomatically"
+                           name="replaceallemptysku"
                            value="Replace All Empty SKU"
                            style="float: left;margin-top: 1px;">
 
@@ -168,7 +168,7 @@ class LS_Duplicate_Sku_List extends WP_List_Table
                     <input id="append-sku-automatically"
                            class="button button-primary button-large "
                            type="submit"
-                           name="setskuautomatically"
+                           name="makewooskuunique"
                            value="Make SKU Unique"
                            style="float: left; margin-top: 1px;margin-left: 10px;">
 
@@ -178,6 +178,7 @@ class LS_Duplicate_Sku_List extends WP_List_Table
                     <?php
                 }
                 ?>
+                <label style="margin-top: 7px;margin-left: 5px;color: red; width: 26%;font-weight: bold;">Please fix any duplicate or empty sku before running any sync.</label>
                 <br/>
             </div>
 

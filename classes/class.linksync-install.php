@@ -39,6 +39,9 @@ class Linksync_installation
                         break;
 
                     case 2:
+//                        include_once(LS_PLUGIN_DIR . 'includes/view/wizard/tax-setup.php');
+//                        break;
+                    case 3:
                         // Set up Product syncing options
                         $selected_product_syncing_type = '';
                         $view_pcontent = '';
@@ -59,7 +62,7 @@ class Linksync_installation
                         include_once(LS_PLUGIN_DIR . 'includes/view/wizard/product-syncing' . $view_pcontent . '.php');
                         break;
 
-                    case 3:
+                    case 4:
                         // Set up Order syncing options
                         $view_ocontent = '';
                         $product_syncing_type = 'disabled';
@@ -77,7 +80,7 @@ class Linksync_installation
                         }
                         include_once(LS_PLUGIN_DIR . 'includes/view/wizard/order-syncing' . $view_ocontent . '.php');
                         break;
-                    case 4:
+                    case 5:
                         $syncing_page = 'vend';
                         if (isset($res['connected_to']) && $res['connected_to'] == 'QuickBooks Online') {
                             $syncing_page = 'qbo';

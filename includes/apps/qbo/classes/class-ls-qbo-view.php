@@ -5,7 +5,7 @@ class LS_QBO_View
 
     public function display()
     {
-        global $currentScreenId, $linkSyncQBOMenuId, $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_qbo_duplicate_and_empty_skus;
+        global $currentScreenId, $linkSyncQBOMenuId;
 
         if ($linkSyncQBOMenuId == $currentScreenId) {
             $subPage = LS_QBO_Menu::get_active_tab_page();
@@ -29,6 +29,10 @@ class LS_QBO_View
 
                     $this->display_order_configuration_tab();
 
+                } else if ('advance' == $subPage) {
+
+                    $this->display_advance_tab();
+
                 } else if ('support' == $subPage) {
 
                     $this->display_support_tab();
@@ -41,12 +45,13 @@ class LS_QBO_View
             } else {
 
                 if ('duplicate_sku' == $linksyncPage) {
-                    if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_qbo_duplicate_and_empty_skus)) {
-                        $this->display_duplicate_sku_list();
-                    } else {
-                        $this->display_configuration_tab();
-                    }
 
+                    $this->display_duplicate_sku_list();
+
+                } else if ('synced_products' == $linksyncPage) {
+                    $this->display_connected_products();
+                } else if ('synced_orders' == $linksyncPage) {
+                    $this->display_connected_orders();
                 } else {
                     $this->display_configuration_tab();
 
@@ -56,9 +61,94 @@ class LS_QBO_View
         }
     }
 
+    public function display_connected_products()
+    {
+        $orderByName = '';
+        $order = 'asc';
+        if (isset($_REQUEST['orderby']) && 'name' == $_REQUEST['orderby']) {
+            $orderByName = 'product_name';
+        }
+
+        if (isset($_REQUEST['order'])) {
+            $order = $_REQUEST['order'];
+        }
+
+        $search_key = '';
+        if(!empty($_REQUEST['s'])){
+            $search_key = $_REQUEST['s'];
+        }
+
+        $connectedProductsArray = LS_Product_Helper::get_qbo_connected_products($orderByName, $order, $search_key);
+        $connectedProducts = new LS_QBO_Connected_Product_List($connectedProductsArray);
+        $connectedProducts->prepare_items();
+        $this->settings_header();
+        ?>
+        <div id="ls-wrapper">
+            <div class="ls-connected-products">
+                <form method="get">
+                    <p class="search-box">
+                        <input type="hidden" name="page" value="<?php echo LS_QBO::$slug; ?>">
+                        <input type="hidden" name="linksync_page" value="synced_products">
+                        <input type="search" id="post-search-input" name="s" value="<?php echo $search_key; ?>">
+                        <input type="submit" id="search-submit" class="button" value="Search Synced Products">
+                    </p>
+                </form>
+
+                <?php $connectedProducts->display() ?>
+            </div>
+        </div>
+        <?php
+    }
+
+    public function display_connected_orders()
+    {
+        $this->settings_header();
+        $orderBy = '';
+        $order = 'DESC';
+        if (isset($_REQUEST['orderby']) && 'id' == $_REQUEST['orderby']) {
+            $orderBy = 'wposts.ID';
+        }
+
+        if (isset($_REQUEST['order'])) {
+            $order = $_REQUEST['order'];
+        }
+
+        $search_key = '';
+        if(!empty($_REQUEST['s'])){
+            $search_key = $_REQUEST['s'];
+        }
+
+        $connectedOrdersArray = LS_QBO_Order_Helper::get_qbo_connected_orders($orderBy, $order, $search_key);
+        $connectedOrders = new LS_QBO_Connected_Order_List($connectedOrdersArray);
+        $connectedOrders->prepare_items();
+
+        ?>
+        <div class="wrap" id="ls-wrapper">
+            <div class="ls-connected-orders">
+                <form method="get">
+                    <p class="search-box">
+                        <input type="hidden" name="page" value="<?php echo LS_QBO::$slug; ?>">
+                        <input type="hidden" name="linksync_page" value="synced_orders">
+                        <input type="search" id="post-search-input" name="s" value="<?php echo $search_key; ?>" placeholder="Search Order ID">
+                        <input type="submit" id="search-submit" class="button" value="Search Synced Orders">
+                    </p>
+                </form>
+
+                    <?php $connectedOrders->display() ?>
+            </div>
+        </div>
+        <?php
+    }
+
     public function display_duplicate_sku_list()
     {
-        global $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_qbo_duplicate_and_empty_skus;
+
+        $in_woo_duplicate_skus = LS_Woo_Product::get_woo_duplicate_sku();
+        $in_woo_empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
+        $in_qbo_duplicate_and_empty_skus = LS_QBO()->options()->getQuickBooksDuplicateProducts();
+        if(isset($in_qbo_duplicate_and_empty_skus['products'])){
+            $in_qbo_duplicate_and_empty_skus = $in_qbo_duplicate_and_empty_skus['products'];
+        }
 
         $duplicateSkuList = new LS_QBO_Duplicate_Sku_List();
         $active_section = LS_QBO_Menu::get_active_section();
@@ -97,6 +187,24 @@ class LS_QBO_View
 
         ?>
         <div class="wrap" id="ls-wrapper">
+            <?php
+            $html_message = '
+                                <div class="ls-modal-message">
+                                    <p style="font-weight: bold;">Please do not close or refresh the browser while linksync is updating your QuickBooks Online skus.</p>
+                                </div>
+                                <div>
+                                    <div id="progressbar"></div>
+                                    <div class="progress-label">Loading...</div>
+                                </div>';
+
+            $modal = new LS_Modal(array(
+                'default_html_message' => $html_message,
+                'content_style' => array(
+                    'display' => 'none'
+                )
+            ));
+            $modal->show();
+            ?>
             <div id="icon-users" class="icon32"><br/></div>
             <h2>Duplicate SKU List</h2>
             <ul class="subsubsub">
@@ -209,6 +317,21 @@ class LS_QBO_View
         $this->render_settings();
     }
 
+    public function display_advance_tab()
+    {
+        $this->settings_header();
+        $this->display_tab_menu();
+        ?>
+        <div class="ls-wrap" id="ls-wrapper">
+            <br/>
+            <div id="ls-qbo-update"
+                 class="ls-qbo-section">
+                <?php LS_QBO_View_Advance_Section::update_section(); ?>
+            </div>
+        </div>
+        <?php
+    }
+
     public function display_support_tab()
     {
         $this->settings_header();
@@ -242,7 +365,22 @@ class LS_QBO_View
 
     public function settings_header()
     {
-        ?><h2>Linksync (Version: <?php echo Linksync_QuickBooks::$version; ?>)</h2><?php
+        $currentLaidInfo = LS_User_Helper::getUserPlan();
+        ?>
+        <div class="ls-logo-container" style="height: 40px;margin-top: 13px;">
+            <img style="height: 40px;" src="<?php echo LS_ASSETS_URL . 'images/linksync/linksync-site.png'; ?>"/>
+            <h2 style="position: relative;top: -51px;left: 181px;font-size: 17px;">
+                (Version: <?php echo Linksync_QuickBooks::$version; ?>)</h2>
+        </div>
+        <br/>
+        <?php
+        if (!empty($currentLaidInfo['user_plan'])) {
+            ?>
+            <div style="font-weight: bold;color: #7d7d7d;">
+                Your Plan : <?php echo $currentLaidInfo['user_plan']; ?>
+            </div>
+            <?php
+        }
     }
 
     /**
@@ -258,6 +396,66 @@ class LS_QBO_View
         );
 
         return array_merge($action_links, $links);
+    }
+
+    public function display_add_api_key_modal()
+    {
+        ?>
+        <div id="myModal" class="reveal-modal">
+            <form method="POST" name="f1" action="">
+                <center><span>Enter the API Key</span></center>
+                <hr>
+                <br/>
+
+                <center>
+                    <div>
+                        <b style="color: #0074a2;">API Key*:</b>
+                        <a href="https://www.linksync.com/help/woocommerce"
+                           style="text-decoration: none"
+                           target="_blank"
+                           title=' Unsure about how to generate an API Key? Click the icon for a specific guidelines to get you up and running with linksync Vend & WooCommerce.'>
+                            <img class="help_tip" src="../wp-content/plugins/linksync/assets/images/linksync/help.png"
+                                 height="16" width="16">
+                        </a>
+                        <input type="text" size="30" name="apikey" value="">
+                        <input type="submit" value="Save" onclick="return checkEmptyLaidKey()"
+                               class="button color-green"
+                               name="add_apiKey">
+                    </div>
+                </center>
+                <span class="ui-icon ui-icon-close close-reveal-modal"></span>
+            </form>
+        </div>
+        <?php
+    }
+
+    public function display_update_api_key_modal()
+    {
+        ?>
+        <div id="modal_update_api" class="reveal-modal">
+            <form method="POST" name="f1" action="">
+                <center><span>Update API Key</span></center>
+                <hr>
+                <br>
+                <center>
+                    <div>
+                        <b style="color: #0074a2;">API Key*:</b>
+                        <a href="https://www.linksync.com/help/woocommerce"
+                           style="text-decoration: none"
+                           target="_blank"
+                           title=' Unsure about how to generate an API Key? Click the icon for a specific guidelines to get you up and running with linksync Vend & WooCommerce.'>
+                            <img class="help_tip" src="../wp-content/plugins/linksync/assets/images/linksync/help.png"
+                                 height="16" width="16">
+                        </a>
+                        <input type="text" size="30" name="apikey"
+                               value="<?php echo LS_QBO()->laid()->getCurrentLaid('No Api Key'); ?>">
+                        <input type="submit" value="Update" class='button color-green' name="apikey_update">
+                    </div>
+                </center>
+                <span class="ui-icon ui-icon-close close-reveal-modal"></span>
+            </form>
+        </div>
+        <?php
     }
 
 }

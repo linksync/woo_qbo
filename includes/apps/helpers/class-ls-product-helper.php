@@ -13,7 +13,7 @@ class LS_Product_Helper
 
     public function getPostTitle()
     {
-        if(isset($this->post_data->post_title)){
+        if (isset($this->post_data->post_title)) {
             return $this->post_data->post_title;
         }
         return null;
@@ -29,7 +29,7 @@ class LS_Product_Helper
 
     public function getPostParentId()
     {
-        if(isset($this->post_data->post_parent)){
+        if (isset($this->post_data->post_parent)) {
             return $this->post_data->post_parent;
         }
         return null;
@@ -37,7 +37,7 @@ class LS_Product_Helper
 
     public function getPostStatus()
     {
-        if(isset($this->post_data->post_status)){
+        if (isset($this->post_data->post_status)) {
             return $this->post_data->post_status;
         }
         return null;
@@ -45,7 +45,7 @@ class LS_Product_Helper
 
     public function getPostType()
     {
-        if(isset($this->post_data->post_type)){
+        if (isset($this->post_data->post_type)) {
             return $this->post_data->post_type;
         }
         return null;
@@ -184,6 +184,65 @@ class LS_Product_Helper
         return $product->get_parent_id();
     }
 
+    public static function get_woocommerce_duplicate_or_empty_skus()
+    {
+        $duplicate_products = LS_Woo_Product::get_woo_duplicate_sku();
+        $emptyProductSkus = LS_Woo_Product::get_woo_empty_sku();
+        $products_data = array_merge($duplicate_products, $emptyProductSkus);
+
+        return $products_data;
+    }
+
+
+    public static function get_qbo_connected_products($orderBy = '', $order = 'asc', $search_key = '')
+    {
+        global $wpdb;
+
+        $orderBySql = '';
+        if (!empty($orderBy)) {
+            $orderBySql = 'ORDER BY ' . $orderBy . ' ' . strtoupper($order);
+        } else {
+            $orderBySql = 'ORDER BY wpmeta.meta_value ASC';
+        }
+
+        $searchWhere = "AND wpmeta.meta_key IN ('_ls_pid') AND wpmeta.meta_value != ''  ";
+        if (!empty($search_key)) {
+            $prepare_sku_search = $wpdb->prepare("wpmeta.meta_key = '_sku' AND wpmeta.meta_value LIKE %s ", '%' . $search_key . '%');
+            $prepare_product_name_search = $wpdb->prepare(" OR wposts.post_title LIKE %s ", '%' . $search_key . '%');
+            $prepare_product_desc_search = $wpdb->prepare(" OR wposts.post_content LIKE %s ", '%' . $search_key . '%');
+
+            $searchWhere = " AND (" . $prepare_sku_search . $prepare_product_name_search . $prepare_product_desc_search . ")";
+        }
+
+        $groupBy = ' GROUP BY wposts.ID ';
+        $sql = "
+					SELECT
+							wposts.ID,
+							wposts.post_title AS product_name,
+                            wposts.post_status AS product_status,
+                            wpmeta.meta_key,
+                            wpmeta.meta_value,
+                            wposts.post_type AS product_type,
+                            wposts.post_parent AS product_parent
+					FROM $wpdb->postmeta AS wpmeta
+					INNER JOIN $wpdb->posts as wposts on ( wposts.ID = wpmeta.post_id )
+					WHERE
+					      wposts.post_type IN('product','product_variation') " . $searchWhere . $groupBy . $orderBySql;
+
+        //get all products with empty sku
+        $results = $wpdb->get_results($sql, ARRAY_A);
+        foreach ($results as $key => $result) {
+            $qbo_id = get_post_meta($result['ID'], '_ls_pid', true);
+            if (empty($qbo_id)) {
+                unset($results[$key]);
+            } else {
+                $result['qbo_id'] = $qbo_id;
+                $results[$key] = $result;
+            }
+        }
+
+        return $results;
+    }
 
 
 }

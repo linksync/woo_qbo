@@ -83,3 +83,36 @@
 #sync_progress_container{
     height: auto !important;
 }
+.yes-in-quickbooks{
+    margin: auto 25px;
+}
+
+.yes-in-quickbooks::before {
+    content: "\f147";
+    font-size: 30px;
+    color: #7cb552;
+    margin-left: -6px;
+}
+
+.no-in-quickbooks{
+    color: #a44;
+    font-size: 28px;
+    margin-left: 25px;
+}
+
+
+.wizard-form-button,
+.wizard-form-button:focus{
+    background-color: #347bc1;
+    border: none;
+    padding: 10px 15px;
+    color: #fff;
+    float: right;
+    cursor: pointer;
+    margin: 1px;
+    text-decoration: none;
+}
+
+.wizard-form-button:hover{
+    color: #fff;
+}

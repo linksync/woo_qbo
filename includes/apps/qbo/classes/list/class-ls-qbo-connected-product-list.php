@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Table list of duplicate or empty sku in QuikcBooks Online
+ * Table list of duplicate sku in WooCommerce or in QuikcBooks Online
  */
 if (!defined('ABSPATH')) {
     exit;
@@ -11,97 +11,24 @@ if (!class_exists('WP_List_Table')) {
     require_once(ABSPATH . 'wp-admin/includes/class-wp-list-table.php');
 }
 
-class LS_QBO_Duplicate_Sku_List extends WP_List_Table
+
+class LS_QBO_Connected_Product_List extends WP_List_Table
 {
-    public $empty_skus = null;
-    public $duplicate_skus = null;
-    public $duplicate_and_empty_skus = null;
 
-    public function __construct($args = null)
+    public $connected_products = array();
+
+    public function __construct($connected_products = array())
     {
-        global $status, $page;
 
-        if (!empty($args['duplicate_products'])) {
-            $this->duplicate_skus = $args['duplicate_products'];
-        }
-
-        if (!empty($args['empty_product_skus'])) {
-            $this->empty_skus = $args['empty_product_skus'];
-        }
-
-        if (!empty($args['section'])) {
-            $this->section = $args['section'];
-        }
-
-        if (!empty($args['duplicate_and_empty_skus'])) {
-            $this->duplicate_and_empty_skus = $args['duplicate_and_empty_skus'];
-        }
+        $this->connected_products = $connected_products;
 
         //Set parent defaults
         parent::__construct(array(
-            'singular' => 'sku',
-            'plural' => 'skus',
+            'singular' => 'connected_product',
+            'plural' => 'connected_products',
             'ajax' => true
         ));
-    }
 
-    public function get_duplicate_and_empty_skus()
-    {
-        return $this->duplicate_and_empty_skus;
-    }
-
-    public function column_default($item, $column_name)
-    {
-
-        switch ($column_name) {
-            case 'name':
-            case 'sku':
-            case 'active':
-                return $item[$column_name];
-            default:
-                return print_r($item, true); //Show the whole array for troubleshooting purposes
-        }
-
-    }
-
-    public function column_name($item)
-    {
-        //Return the title contents
-        return sprintf('%1$s',
-            /*$1%s*/
-            $item['name']
-        );
-    }
-
-    public function column_active($item)
-    {
-        $status = 'Inactive';
-        if ('1' == $item['active']) {
-            $status = 'Active';
-        }
-        return sprintf('%1$s',
-            $status
-        );
-    }
-
-    public function is_section($section)
-    {
-        $active_section = LS_QBO_Menu::get_active_section();
-        if ($active_section == $section) {
-            return true;
-        }
-        return false;
-    }
-
-    public function column_cb($item)
-    {
-        return sprintf(
-            '<input type="checkbox" name="%1$s[]" value="%2$s" />',
-            /*$1%s*/
-            'ID',  //Let's simply repurpose the table's singular label ("movie")
-            /*$2%s*/
-            $item['id']                //The value of the checkbox should be the record's id
-        );
     }
 
     /**
@@ -123,7 +50,8 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
             'cb' => '<input type="checkbox" />', //Render a checkbox instead of text
             'name' => 'Product Name',
             'sku' => 'Product SKU',
-            'active' => 'Product Status'
+            'type' => 'Product Type',
+            'status' => 'Product Status'
         );
 
         return $columns;
@@ -132,50 +60,58 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
     public function get_sortable_columns()
     {
         $sortable_columns = array(
-            'name' => array('name', false),     //true means it's already sorted
-            'sku' => array('sku', false),
-            'active' => array('active', false)
+            'name' => array('name', false),
         );
         return $sortable_columns;
     }
 
-    public function extra_tablenav($which)
+    public function column_cb($item)
     {
-        if ('top' == $which && $this->has_items()) {
-            ?>
-            <div>
-                    <input id="make-qbo-skus-unique"
-                           class="button button-primary button-large "
-                           type="submit"
-                           name="makeqboskuunique"
-                           value="Make QuickBooks SKU Unique"
-                           style="float: left; margin-top: 1px;">
-
-                    <span id="ls-qbo-spinner" class="spinner is-active"
-                          style="float: left;display: none;"></span>
-                <br/>
-            </div>
-
-            <?php
-        }
-    }
-
-    public function get_bulk_actions()
-    {
-        $actions = array(
-            'replace_empty_sku' => 'Replace Empty SKU',
-            'make_sku_unique' => 'Make SKU Unique',
-            'delete_permanently' => 'Delete Permanently',
+        return sprintf(
+            '<input type="checkbox" name="%1$s[]" value="%2$s" />',
+            /*$1%s*/
+            'ID',  //Let's simply repurpose the table's singular label ("movie")
+            /*$2%s*/
+            $item['ID']                //The value of the checkbox should be the record's id
         );
-        return $actions;
     }
+
+    public function column_name($item)
+    {
+
+        //Return the title contents
+        return sprintf('%1$s <span style="color:silver">(id:%2$s)</span>',
+            /*$1%s*/
+            $item['product_name'],
+            /*$2%s*/
+            $item['ID']
+            /*$3%s*/
+            /*$this->row_actions($actions)*/
+        );
+
+    }
+
+
+    public function column_type($item)
+    {
+        $product = new LS_Woo_Product($item['ID']);
+        return $product->get_type();
+    }
+
+    public function column_sku($item)
+    {
+        $product_meta = new LS_Product_Meta($item['ID']);
+        return $product_meta->get_sku();
+    }
+
+    public function column_status($item)
+    {
+        return $item['product_status'];
+    }
+
 
     public function process_bulk_action()
     {
-        //Detect when a bulk action is being triggered...
-        if ('delete_permanently' === $this->current_action()) {
-
-        }
 
     }
 
@@ -199,7 +135,6 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
         $hidden = array();
         $sortable = $this->get_sortable_columns();
 
-
         /**
          * REQUIRED. Finally, we build an array to be used by the class for column
          * headers. The $this->_column_headers property takes an array which contains
@@ -209,22 +144,17 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
         $this->_column_headers = array($columns, $hidden, $sortable);
 
 
+        $data = $this->connected_products;
+        if (empty($this->connected_products)) {
+            $data = LS_Product_Helper::get_qbo_connected_products();
+        }
+
+
         /**
          * Optional. You can handle your bulk actions however you see fit. In this
          * case, we'll handle them within our package just to keep things clean.
          */
         $this->process_bulk_action();
-
-        /**
-         * Instead of querying a database, we're going to fetch the example data
-         * property we created for use in this plugin. This makes this example
-         * package slightly different than one you might build on your own. In
-         * this example, we'll be using array manipulation to sort and paginate
-         * our data. In a real-world implementation, you will probably want to
-         * use sort and pagination data to build a custom query instead, as you'll
-         * be able to use your precisely-queried data immediately.
-         */
-        $data = $this->duplicate_and_empty_skus;
 
         /**
          * This checks for sorting input and sorts the data in our array accordingly.
@@ -234,17 +164,6 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
          * to a custom query. The returned data will be pre-sorted, and this array
          * sorting technique would be unnecessary.
          */
-        function usort_reorder($a, $b)
-        {
-            $orderby = (!empty($_REQUEST['orderby'])) ? $_REQUEST['orderby'] : 'name'; //If no sort, default to title
-            $order = (!empty($_REQUEST['order'])) ? $_REQUEST['order'] : 'asc'; //If no order, default to asc
-            $result = strcmp($a[$orderby], $b[$orderby]); //Determine sort order
-            return ($order === 'asc') ? $result : -$result; //Send final sort direction to usort
-        }
-
-        if (!empty($data)) {
-            usort($data, 'usort_reorder');
-        }
 
 
         /**
@@ -288,5 +207,4 @@ class LS_QBO_Duplicate_Sku_List extends WP_List_Table
             'total_pages' => ceil($total_items / $per_page)   //WE have to calculate the total number of pages
         ));
     }
-
 }

@@ -34,6 +34,13 @@ return array(
         *    api url for dev environment
         */
         'url'=> 'https://dev-api.linksync.com/api/v1/'
+    ),
+
+    'local' => array(
+        /**
+         * api url for local environment
+         */
+        'url' => 'http://localhost:8080/api/v1/'
     )
 
 );

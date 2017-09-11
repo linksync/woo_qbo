@@ -87,7 +87,7 @@ class LS_QBO_Order_Form
 
     public function form_header()
     {
-        echo '<h3>', $this->header_title, '</h3>';
+
     }
 
     /**
@@ -96,37 +96,46 @@ class LS_QBO_Order_Form
     public function sync_type()
     {
         $option = $this->options['sync_type'];
-
         ?>
-        <fieldset id="qbo-order-configuration">
-            <legend>Order Syncing Type</legend>
-            <p>
+        <br/>
+        <table class="wp-list-table widefat fixed">
+            <thead>
+            <tr>
+                <td><strong>Order Syncing Type</strong></td>
+            </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <p>
 
-                <input <?php echo ($option == $this->sync_types[0]) ? 'checked' : ''; ?>
-                        name="order_sync_type"
-                        type="radio"
-                        id="ls-qbo-to-woo"
-                        value="<?php echo $this->sync_types[0]; ?>">
+                        <input <?php echo ($option == $this->sync_types[0]) ? 'checked' : ''; ?>
+                                name="order_sync_type"
+                                type="radio"
+                                id="ls-qbo-to-woo"
+                                value="<?php echo $this->sync_types[0]; ?>">
 
-                <label for="ls-qbo-to-woo">WooCommerce to QuickBooks</label>
-                <?php
-                help_link(array(
-                    'title' => 'If you\'re using the QuickBooks Online to WooCommerce product syncing option, then you need to enable this option so that any sales in WooCommerce are synced to QuickBooks Online - this ensures that the inventory levels in QuickBooks Online are updated based on any orders entered in WooCommerce.'
-                ));
-                ?>
+                        <label for="ls-qbo-to-woo">WooCommerce to QuickBooks</label>
+                        <?php
+                        help_link(array(
+                            'title' => 'If you\'re using the QuickBooks Online to WooCommerce product syncing option, then you need to enable this option so that any sales in WooCommerce are synced to QuickBooks Online - this ensures that the inventory levels in QuickBooks Online are updated based on any orders entered in WooCommerce.'
+                        ));
+                        ?>
 
-                <input name="order_sync_type" type="radio"
-                       id="ls-qbo-disabled" <?php echo ($option == $this->sync_types[1]) ? 'checked' : ''; ?>
-                       value="<?php echo $this->sync_types[1]; ?>">
-                <label for="ls-qbo-disabled">Disabled</label>
-                <?php
-                help_link(array(
-                    'title' => 'Use the Disable option to prevent any orders syncing between QuickBooks Online and WooCommerce stores. This is the default setting if you\'re using ‘Two-way’ product syncing, as this option does not require order syncing.'
-                ));
-                ?>
-            </p>
-
-        </fieldset>
+                        <input name="order_sync_type" type="radio"
+                               id="ls-qbo-disabled" <?php echo ($option == $this->sync_types[1]) ? 'checked' : ''; ?>
+                               value="<?php echo $this->sync_types[1]; ?>">
+                        <label for="ls-qbo-disabled">Disabled</label>
+                        <?php
+                        help_link(array(
+                            'title' => 'Use the Disable option to prevent any orders syncing between QuickBooks Online and WooCommerce stores. This is the default setting if you\'re using ‘Two-way’ product syncing, as this option does not require order syncing.'
+                        ));
+                        ?>
+                    </p>
+                </td>
+            </tr>
+            </tbody>
+        </table>
         <?php
     }
 

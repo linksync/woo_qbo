@@ -93,13 +93,13 @@ class LS_QBO_Sync
 
     public static function updateQuickBooksAccounts()
     {
-        if(isset($_REQUEST['update']) && true == $_REQUEST['update']){
+        if (isset($_REQUEST['update']) && true == $_REQUEST['update']) {
             set_time_limit(0);
             $qbo_api = LS_QBO()->api();
 
             $accounts = $qbo_api->get_accounts();
             $account = new LS_QBO_Account();
-            if(!empty($accounts['accounts'])){
+            if (!empty($accounts['accounts'])) {
                 $account->batchInsertUpdate($accounts['accounts']);
             }
 
@@ -114,6 +114,7 @@ class LS_QBO_Sync
         wp_send_json(LS_QBO()->options()->getTaxRateAndCodeOjects());
         die();
     }
+
     public static function product_options()
     {
         wp_send_json(LS_QBO()->product_option()->get_current_product_syncing_settings());
@@ -137,20 +138,49 @@ class LS_QBO_Sync
 
     public static function sync_triggered_by_lws()
     {
-        LS_QBO_Sync::lwsApiHasUpdates();
+        $last_product_sync = time();
+        if (!isset($_REQUEST['check'])) {
 
-        $last_sync = LS_QBO()->options()->last_product_update();
-        LSC_Log::add_dev_success('LS_QBO_Sync::sync_triggered_by_lws', 'Linksync triggered a sync.<br/> Last sync :' . $last_sync . '<br/> Current Server Time: ' . current_time('mysql'));
+            LS_QBO_Sync::lwsApiHasUpdates();
 
-        if (empty($last_sync)) {
-            set_time_limit(0);
-            LS_QBO_Sync::product_to_woo();
-        } else {
-            set_time_limit(0);
-            LS_QBO_Sync::product_to_woo_since_last_update();
+            $last_sync = LS_QBO()->options()->last_product_update();
+            LSC_Log::add_dev_success('LS_QBO_Sync::sync_triggered_by_lws', 'Linksync triggered a sync.<br/> Last sync :' . $last_sync . '<br/> Current Server Time: ' . current_time('mysql'));
+
+            if (empty($last_sync)) {
+                set_time_limit(0);
+                LS_QBO_Sync::product_to_woo();
+            } else {
+                set_time_limit(0);
+                LS_QBO_Sync::product_to_woo_since_last_update();
+            }
+
+            LS_QBO_Sync::get_and_sync_product_to_woo_by_sku();
+
         }
 
-        die();
+        wp_send_json(array(
+            'success' => 'Sync trigger success',
+            'last_product_sync' => $last_product_sync
+        ));
+    }
+
+    public static function get_and_sync_product_to_woo_by_sku()
+    {
+        if (!empty($_REQUEST['sku'])) {
+            $productSearchWithSku = LS_QBO()->api()->product()->get_product(array(
+                'sku' => $_REQUEST['sku']
+            ));
+
+            if (!empty($productSearchWithSku['products'])) {
+
+                foreach ($productSearchWithSku['products'] as $product) {
+
+                    $product = new LS_Simple_Product($product);
+                    self::import_single_product_to_woo($product);
+
+                }
+            }
+        }
     }
 
 
@@ -205,10 +235,9 @@ class LS_QBO_Sync
                     }
                 }
             }
-        } elseif (true == $product->is_type('simple')) {
+        } else {
             LS_QBO_Sync::import_single_product_to_qbo($product_id);
         }
-
 
     }
 
@@ -224,6 +253,7 @@ class LS_QBO_Sync
         $productHelper = new LS_Product_Helper($product);
         $product_meta = new LS_Product_Meta($product_id);
         $product_child = LS_Woo_Product::has_child($product_id);
+        $returnData = array();
 
         if (!empty($product_child)) {
             return 'parent_product_will_not_be_sync';
@@ -343,7 +373,7 @@ class LS_QBO_Sync
                  * Do not alter product_type in sending product json to LWS then to QuickBooks
                  */
                 $qboProductType = $product_meta->get_product_type();
-                if(!empty($qboProductType)){
+                if (!empty($qboProductType)) {
                     $json_product->set_product_type($qboProductType);
                     if (LS_QBO_ItemType::SERVICE == $qboProductType || LS_QBO_ItemType::NONINVENTORY == $qboProductType) {
                         $json_product->remove_quantity();
@@ -363,7 +393,7 @@ class LS_QBO_Sync
                  * Override product name/title if it has more that 100 character because
                  * QuickBooks has 100 limit documented here https://developer.intuit.com/docs/api/accounting/item
                  */
-                if($skuLength > 100){
+                if ($skuLength > 100) {
                     $truncated100CharSku = htmlentities($sku, ENT_QUOTES);
                     $truncated100CharSku = mb_substr($truncated100CharSku, 0, 100);
                     $json_product->set_sku($truncated100CharSku);
@@ -386,7 +416,7 @@ class LS_QBO_Sync
 
                 $wooPurchaseNote = $product_meta->get_purchase_note();
                 $json_product->set_purchasing_information(null);
-                if(!empty($wooPurchaseNote)){
+                if (!empty($wooPurchaseNote)) {
                     $json_product->set_purchasing_information($wooPurchaseNote);
                 }
 
@@ -446,6 +476,20 @@ class LS_QBO_Sync
                 $j_product = $json_product->get_json_product();
                 $result = LS_QBO()->api()->product()->save_product($j_product);
 
+                $returnData = array(
+                    'json_being_sent' => $j_product,
+                    'response' => $result
+                );
+                if (
+                    !empty($result['errorCode']) &&
+                    !empty($result['type']) &&
+                    'C400' == $result['type']
+                ) {
+                    $returnData['response']['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
+                }
+
+                $product_meta->update_to_qbo_json($returnData);
+
                 if (!empty($result['id'])) {
                     $product_meta->update_product_id(get_qbo_id($result['id']));
 
@@ -465,7 +509,7 @@ class LS_QBO_Sync
                     $product_meta->update_product_type($product->get_product_type());
                     $product_meta->update_cost_price($product->get_cost_price());
 
-                    if(isset($productDescriptionCount) && $productDescriptionCount > 4000){
+                    if (isset($productDescriptionCount) && $productDescriptionCount > 4000) {
                         $result = array(
                             'errorCode' => 2050,
                             'type' => '',
@@ -480,7 +524,7 @@ class LS_QBO_Sync
                     LSC_Log::add_dev_success('LS_QBO_Sync::import_single_product_to_qbo', 'Product was imported to QuickBooks <br/> Product json being sent <br/>' . $j_product . '<br/> Response: <br/>' . json_encode($result));
 
                 } else {
-                    if(!empty($result['userMessage']) &&  'Duplicate Name Exists Error' == $result['userMessage']){
+                    if (!empty($result['userMessage']) && 'Duplicate Name Exists Error' == $result['userMessage']) {
                         $productPost = array();
                         $productPost['ID'] = $product_id;
                         $productPost['post_status'] = 'private';
@@ -494,6 +538,8 @@ class LS_QBO_Sync
                 }
             }
         }
+
+        return $returnData;
 
     }
 
@@ -563,14 +609,21 @@ class LS_QBO_Sync
                     $product_id = $item['product_id'];
                 }
                 $pro_object = wc_get_product($product_id);
+                $wooProduct = new LS_Woo_Product($product_id);
                 $product_meta = new LS_Product_Meta($product_id);
                 $orderLineItem = new LS_Woo_Order_Line_Item($item);
                 $price = $pro_object->get_price();
                 $lineSubTotal = $orderLineItem->get_subtotal();
                 $lineQuantity = $orderLineItem->get_quantity();
-                if(!empty($lineSubTotal)){
+                if (!empty($lineSubTotal)) {
                     $price = (float)($lineSubTotal / $lineQuantity);
                 }
+
+                $is_priced_individually = $orderLineItem->is_bundled_item_priced_individually();
+                if('no' == $is_priced_individually){
+                    $price = 0;
+                }
+
                 $discount = $orderLineItem->get_discount_amount();
 
                 $qbo_tax = LS_Woo_Tax::get_mapped_quickbooks_tax_for_product(
@@ -595,7 +648,7 @@ class LS_QBO_Sync
                 }
 
 
-                if(empty($taxId)){
+                if (empty($taxId)) {
                     $wooTaxClass = ('' == $product_meta->get_tax_class()) ? 'standard' : $product_meta->get_tax_class();
                     $qboTaxClassInfo = LS_Woo_Tax::getQuickBooksTaxInfoByWooTaxKey($wooTaxClass);
                     if (!empty($qboTaxClassInfo['id'])) {
@@ -606,13 +659,13 @@ class LS_QBO_Sync
                 }
 
 
-                $qboTaxable = ('none' == $product_meta->get_tax_status()) ? 'false': 'true';
-                if($isQuickBooksUsAccount){
+                $qboTaxable = ('none' == $product_meta->get_tax_status()) ? 'false' : 'true';
+                if ($isQuickBooksUsAccount) {
                     $metGetTaxable = $product_meta->get_taxable();
                     $qboTaxable = ('' == $metGetTaxable) ? $qboTaxable : $metGetTaxable;
-                    if('false' == $qboTaxable){
-                        $productTaxStatus =  'none';
-                        $taxId =  '';
+                    if ('false' == $qboTaxable) {
+                        $productTaxStatus = 'none';
+                        $taxId = '';
                     }
                 }
                 $orderLineTax = $orderLineItem->get_line_tax();
@@ -628,7 +681,7 @@ class LS_QBO_Sync
                 $taxValue = $orderLineTax;
 
                 //If there is no tax setup on this line item then tax details to null
-                if(empty($orderLineTax)){
+                if (empty($orderLineTax)) {
                     $taxName = null;
                     $taxId = null;
                     $taxRate = null;
@@ -759,15 +812,15 @@ class LS_QBO_Sync
 
         $source = 'WooCommerce';
         $comments = $source . ' Order: ' . $order_no;
-        $customer_notes = $orderHelper->getCustomerNotes(); 
-        $comments = $customer_notes."\n\n".$comments;
+        $customer_notes = $orderHelper->getCustomerNotes();
+        $comments = $customer_notes . "\n\n" . $comments;
 
         if (!empty($shipping_method)) {
 
             $qbo_tax = LS_Woo_Tax::get_mapped_quickbooks_tax_for_shipping($tax_mapping, $order_tax);
             $shipping_cost = $orderHelper->getShippingTotal();
             $shipping_tax = $order->get_shipping_tax();
-            if(empty($shipping_tax) && isset($qbo_tax[0]) && 'no_tax' ==$qbo_tax[0]){
+            if (empty($shipping_tax) && isset($qbo_tax[0]) && 'no_tax' == $qbo_tax[0]) {
                 $qbo_tax[0] = null;
                 $qbo_tax[1] = null;
                 $qbo_tax[3] = null;
@@ -863,18 +916,33 @@ class LS_QBO_Sync
         $json_order->set_billingAddress($billing_address);
         $json_order->set_deliveryAddress($delivery_address);
 
-        if('on' == $order_option->location_status()){
+        if ('on' == $order_option->location_status()) {
             $json_order->set_location_id($order_option->selected_location());
         }
 
-        if('on' == $order_option->class_status()){
+        if ('on' == $order_option->class_status()) {
             $json_order->set_class_id($order_option->selected_order_class());
         }
 
         $order_json_data = $json_order->get_json_orders();
         $post_order = LS_QBO()->api()->order()->save_orders($order_json_data);
+        if (
+            !empty($post_order['errorCode']) &&
+            !empty($post_order['type']) &&
+            'C400' == $post_order['type']
+        ) {
+            LS_User_Helper::save_syncing_error_limit();
+        }
+
+        $order_meta = new LS_Order_Meta($order_id);
+        $order_meta->updateOrderJsonFromWooToQbo(array(
+            'order_being_sent' => $order_json_data,
+            'response' => $post_order
+        ));
+
 
         if (!empty($post_order['id'])) {
+            $order_meta->update_qbo_id(get_qbo_id($post_order['id']));
             $note = sprintf(__('Order exported to QBO: %s', 'woocommerce'), $order_no);
             $order->add_order_note($note);
             LS_QBO_Order_Helper::deleteOrderSyncingError($order_id);
@@ -994,7 +1062,7 @@ class LS_QBO_Sync
             //return if sync type is disabled
             return;
         }
-        if('shipping_with_tax' == $product->get_sku()){
+        if ('shipping_with_tax' == $product->get_sku()) {
             //Save or update the details to qbo shipping product to the wordpress option to use it later
             LS_QBO()->options()->updateShippingProductWithTax(json_encode($product->product));
 
@@ -1048,24 +1116,9 @@ class LS_QBO_Sync
         if (false == $deleted) {
             remove_all_actions('save_post');
             remove_action('pre_post_update', 'wp_save_post_revision');
-            //$product_id will not be empty if the product exists
-            if (!empty($product_id)) {
 
-                //Get the product meta object for product
-                $product_meta = new LS_Product_Meta($product_id);
-
-                LS_Woo_Product::update_woo_product_using_qbo_product(
-                    $current_sync_option,
-                    $product,
-                    $product_meta
-                );
-
-                //Enable back the revision for other plugin to still use it
-                add_action('pre_post_update', 'wp_save_post_revision');
-                LS_QBO_Sync::add_action_save_post();
-
-
-            } else if (empty($product_id)) {
+            $is_new = false;
+            if (empty($product_id)) {
 
                 //product was not found therefore check if create new was on and create the product
                 if ('on' == $current_sync_option['create_new']) {
@@ -1075,26 +1128,31 @@ class LS_QBO_Sync
                     $product_args['post_content'] = empty($product_description) ? '&nbsp' : html_entity_decode($product_description);
 
                     $product_id = LS_Woo_Product::create($product_args, true);
-                }
-
-                //Product was created
-                if (!empty($product_id)) {
-
-                    //Get the product meta object for product
-                    $product_meta = new LS_Product_Meta($product_id);
-                    LS_Woo_Product::update_woo_product_using_qbo_product(
-                        $current_sync_option,
-                        $product,
-                        $product_meta,
-                        true
-                    );
-
-                    //Enable back the revision for other plugin to still use it
-                    add_action('pre_post_update', 'wp_save_post_revision');
-                    LS_QBO_Sync::add_action_save_post();
-
+                    $is_new = true;
                 }
             }
+
+            //$product_id will not be empty if the product exists
+            if (!empty($product_id)) {
+
+                //Get the product meta object for product
+                $product_meta = new LS_Product_Meta($product_id);
+                $product_meta->update_from_qbo_json($product->get_product_json());
+
+                LS_Woo_Product::update_woo_product_using_qbo_product(
+                    $current_sync_option,
+                    $product,
+                    $product_meta,
+                    $is_new
+                );
+
+                //Enable back the revision for other plugin to still use it
+                add_action('pre_post_update', 'wp_save_post_revision');
+                LS_QBO_Sync::add_action_save_post();
+
+
+            }
+
         }
 
         //set last sync to the current UTC time
@@ -1168,8 +1226,8 @@ class LS_QBO_Sync
     {
 
         if (!empty($_POST['product'])) {
-            $deleted_product = (isset($_POST['deleted_product']) && is_numeric($_POST['deleted_product'])) ? $_POST['deleted_product']: 0;
-            $total_product = (isset($_POST['product_total_count']) && is_numeric($_POST['product_total_count'])) ? $_POST['product_total_count']: 0;
+            $deleted_product = (isset($_POST['deleted_product']) && is_numeric($_POST['deleted_product'])) ? $_POST['deleted_product'] : 0;
+            $total_product = (isset($_POST['product_total_count']) && is_numeric($_POST['product_total_count'])) ? $_POST['product_total_count'] : 0;
 
             $product_total_count = (int)$total_product - (int)$deleted_product;
 
@@ -1178,14 +1236,42 @@ class LS_QBO_Sync
 
             $product_number = $_POST['product_number'];
             $product_number = ($product_number > $product_total_count) ? $product_total_count : $product_number;
+            $product_number = $product_number + 1;
             $msg = $product_number . " of " . $product_total_count . " Product(s)";
 
             $progressValue = round(($product_number / $product_total_count) * 100);
 
             $response = array(
                 'msg' => $msg,
-                'percentage' => $progressValue
+                'percentage' => $progressValue,
+                'product_number' => $product_number,
+                'upgrade_button' => LS_User_Helper::update_button('upgrade now', ''),
+                'why_limit_link' => LS_User_Helper::why_limit_link(),
+                'trial_product_sync_limit' => LS_QBO_Constant::TRIAL_PRODUCT_SYNC_LIMIT
+
             );
+
+            $trial_item_count = $_POST['trial_item_count'];
+            $sync_limit_count = $_POST['sync_limit_count'];
+
+            $isFreeTrial = LS_User_Helper::is_laid_on_free_trial();
+
+            if ('capping_did_not_exists' != $trial_item_count) {
+
+                if (
+                    $trial_item_count >= LS_QBO_Constant::TRIAL_PRODUCT_SYNC_LIMIT &&
+                    $product_number >= LS_QBO_Constant::TRIAL_PRODUCT_SYNC_LIMIT &&
+                    $isFreeTrial
+                ) {
+                    $response['html_error_message'] = LS_User_Helper::save_syncing_error_limit();
+                }
+
+            }
+
+            if (!$isFreeTrial) {
+                LS_User_Helper::reset_capping_error_message();
+            }
+
             wp_send_json($response);
         }
     }
@@ -1194,7 +1280,7 @@ class LS_QBO_Sync
     {
 
         if (!empty($_POST['p_id'])) {
-            LS_QBO_Sync::import_single_product_to_qbo($_POST['p_id']);
+            $response_product_to_qbo = LS_QBO_Sync::import_single_product_to_qbo($_POST['p_id']);
             $product_number = isset($_POST['product_number']) ? $_POST['product_number'] : 0;
             $product_total_count = isset($_POST['total_count']) ? $_POST['total_count'] : 0;
             $product_number = ($product_number > $product_total_count) ? $product_total_count : $product_number;
@@ -1203,7 +1289,9 @@ class LS_QBO_Sync
 
             $response = array(
                 'msg' => $msg,
-                'percentage' => $progressValue
+                'percentage' => $progressValue,
+                'product_number' => $product_number,
+                'response_product_to_qbo' => $response_product_to_qbo,
             );
             wp_send_json($response);
         }

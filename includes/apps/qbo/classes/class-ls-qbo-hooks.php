@@ -29,6 +29,9 @@ class LS_QBO_Hook
 
         }
 
+        LS_QBO_Order_Custom_Column::init();
+        LS_QBO_Product_Custom_Column::init();
+
     }
 
 }

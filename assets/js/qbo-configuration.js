@@ -10,6 +10,7 @@
     $(document).ready(function () {
 
         var ls_wrapper = $('#ls-wrapper');
+        lsSyncModal.init();
 
         ls_wrapper.on('click', '.btn-no', function () {
             var ls_pop_ups = $('.ls-pop-ups');
@@ -30,12 +31,23 @@
             ls_pop_ups.fadeIn();
         });
 
+        ls_wrapper.on('click', '#btn_sync_products_from_qbo', function () {
+            console.log('from qbo');
+            lsSyncModal.openQboToWooModal();
+
+        });
+
+        ls_wrapper.on('click', '#btn_sync_products_to_qbo', function () {
+            console.log('to qbo');
+            lsSyncModal.openWooToQboModal();
+        });
+
         /**
          * Click event for syncing product comming from qbo to woocommerce
          */
         ls_wrapper.on('click', '.product_from_qbo', function () {
-            lsSyncModal.showSyncModal();
-            product_from_qbo_to_woo();
+            // lsSyncModal.showSyncModal();
+            // product_from_qbo_to_woo();
         });
 
 
@@ -86,7 +98,7 @@
                             product_total_count: res.pagination.results,
                             product: res.products[i],
                             product_number: product_number
-                        }
+                        };
 
                         lsAjax.post(p_data, function (p_res) {
                             progressVal = $("#progressbar").progressbar( "value" );

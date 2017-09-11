@@ -53,16 +53,28 @@
         ls_wrapper.on('submit', '#ps_form_settings', function(e){
             ls_wrapper.addClass('ls-loading');
             main_view_container.empty();
+            var form = $(this);
+            var form_items = form.serialize();
             var $data  ={
                 'action'      : 'show_ps_view',
-                'form_items'  : $(this).serialize()
+                'form_items'  : form_items
             };
             ajax_flag = 1;
 
-            lsAjax.post($data ,function(html_response){
+            lsAjax.post($data, function (html_response) {
+
                 main_view_container.fadeIn('slow').append(html_response);
                 ls_wrapper.removeClass('ls-loading');
                 ajax_flag = 1;
+                var syncType = $("input[name='product_sync_type']:checked").val();
+                if ('disabled' != syncType) {
+                    var option = {
+                        sync_direction: syncType,
+                        current_screen: 'settings'
+                    };
+                    lsSyncModal.open(option);
+                }
+
             });
 
             e.preventDefault();
@@ -147,47 +159,37 @@
          * Click event for syncing product comming from qbo to woocommerce
          */
         ls_wrapper.on('click', '.product_from_qbo', function(){
-            lsSyncModal.showSyncModal();
-            product_from_qbo_to_woo();
-            done_required_sync();
+            // lsSyncModal.showSyncModal();
+            // product_from_qbo_to_woo();
+            // done_required_sync();
         });
 
         /**
          * Click event for syncing prodcut from woocommerce to qbo
          */
         ls_wrapper.on('click', '.product_to_qbo', function(){
-            lsSyncModal.showSyncModal();
-            product_from_woo_to_qbo();
-            done_required_sync();
+            // lsSyncModal.showSyncModal();
+            // product_from_woo_to_qbo();
+            // done_required_sync();
         });
 
         ls_wrapper.on('click', '#btn_sync_products_from_qbo', function(){
-
-            var sync_pop_up_msghtml     =   $('#sync_pop_up_msg');
-            var two_buttons_cont        =   $('.two_way_pop_button');
-            var sync_all_products_to    =   $('.sync_all_products_to_qbo');
-            var sync_all_products_from  =   $('.sync_all_products_from_qbo');
-            var ls_pop_ups              =   $('.ls-pop-ups');
-
-            sync_pop_up_msghtml.html('Your products from QuickBooks Online will be imported to WooCommerce.<br/>Do you wish to continue?');
-            two_buttons_cont.hide();
-            sync_all_products_to.hide();
-            sync_all_products_from.show();
-            ls_pop_ups.fadeIn();
+            lsSyncModal.openQboToWooModal();
         });
 
         ls_wrapper.on('click', '#btn_sync_products_to_qbo', function(){
-            var sync_pop_up_msghtml     =   $('#sync_pop_up_msg');
-            var two_buttons_cont        =   $('.two_way_pop_button');
-            var sync_all_products_to    =   $('.sync_all_products_to_qbo');
-            var sync_all_products_from  =   $('.sync_all_products_from_qbo');
-            var ls_pop_ups              =   $('.ls-pop-ups');
-
-            sync_pop_up_msghtml.html('Your WooCommerce products will be exported to QuickBooks Online. <br/> Do you wish to continue?');
-            two_buttons_cont.hide();
-            sync_all_products_to.show();
-            sync_all_products_from.hide();
-            ls_pop_ups.fadeIn();
+            lsSyncModal.openWooToQboModal();
+            // var sync_pop_up_msghtml     =   $('#sync_pop_up_msg');
+            // var two_buttons_cont        =   $('.two_way_pop_button');
+            // var sync_all_products_to    =   $('.sync_all_products_to_qbo');
+            // var sync_all_products_from  =   $('.sync_all_products_from_qbo');
+            // var ls_pop_ups              =   $('.ls-pop-ups');
+            //
+            // sync_pop_up_msghtml.html('Your WooCommerce products will be exported to QuickBooks Online. <br/> Do you wish to continue?');
+            // two_buttons_cont.hide();
+            // sync_all_products_to.show();
+            // sync_all_products_from.hide();
+            // ls_pop_ups.fadeIn();
         });
 
         function done_required_sync() {
@@ -397,6 +399,8 @@
 
         //show view
         show_product_syncing_settings();
+
+        lsSyncModal.init();
 
     });
 

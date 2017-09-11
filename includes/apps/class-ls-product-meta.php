@@ -784,6 +784,25 @@ class LS_Product_Meta
         return $this->get_meta('_ls_product_description');
     }
 
+    public function get_from_qbo_json()
+    {
+        return $this->get_meta('_ls_from_qbo_json');
+    }
+
+    public function update_from_qbo_json($from_qbo_json)
+    {
+        return $this->update_meta('_ls_from_qbo_json', $from_qbo_json);
+    }
+
+    public function update_to_qbo_json($to_qbo_json)
+    {
+        return $this->update_meta('_ls_to_qbo_json', $to_qbo_json);
+    }
+
+    public function get_to_qbo_json()
+    {
+        return $this->get_meta('_ls_to_qbo_json');
+    }
 
     public function get_metas()
     {

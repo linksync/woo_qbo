@@ -5,10 +5,107 @@ class LS_QBO_Notice
 
     public function display()
     {
+        /**
+         * User helpers that will give user's admin notices
+         */
+        LS_User_Helper::setUpLaidInfoMessage();
+
+        $current_screen = get_current_screen();
+        $GLOBALS['ls_qbo_current_screen'] = $current_screen;
+
         $this->display_run_wizard_notice();
         $this->linksync_update_plugin_notice();
         $this->show_on_product_edit_screen();
+
+
+        if ('shop_order' == $current_screen->id) {
+            if (isset($_GET['post'])) {
+
+                if (isset($_GET['ls_dev_log'])) {
+                    if ('woo_to_qbo' == $_GET['ls_dev_log']) {
+                        $this->showWooToQboDevOrderNotice($_GET['post']);
+                    } else if ('qbo_to_woo' == $_GET['ls_dev_log']) {
+                        $this->showQboToWooDevOrderNotice($_GET['post']);
+                    }
+
+                }
+
+
+                $this->show_order_woo_to_qbo_admin_error_notice($_GET['post']);
+
+            }
+        } else if ('product' == $current_screen->id) {
+            if (isset($_GET['post'])) {
+
+                if (isset($_GET['ls_dev_log'])) {
+                    if ('woo_to_qbo' == $_GET['ls_dev_log']) {
+                        $this->showWooToQboDevProductNotice($_GET['post']);
+                    } else if ('qbo_to_woo' == $_GET['ls_dev_log']) {
+                        $this->showQboToWooDevProductNotice($_GET['post']);
+                    }
+
+                }
+
+                $this->show_product_woo_to_qbo_admin_error_notice($_GET['post']);
+            }
+        }
+
     }
+
+    public function showWooToQboDevOrderNotice($order_id)
+    {
+        $orderMeta = new LS_Order_Meta($order_id);
+        echo '<div>';
+        ls_print_r($orderMeta->getOrderJsonFromWooToQbo());
+        echo '</div>';
+    }
+
+    public function showQboToWooDevOrderNotice($order_id)
+    {
+
+    }
+
+    public function show_order_woo_to_qbo_admin_error_notice($order_id)
+    {
+        $orderSyncError = LS_QBO_Order_Helper::getOrderSyncingError($order_id);
+
+        if (isset($orderSyncError['errorCode'])) {
+
+            if (400 == $orderSyncError['errorCode']) {
+                $this->errorNotice('Sync Order to QuickBooks Failed: (' . $orderSyncError['userMessage'] . ')');
+            }
+        }
+    }
+
+    public function showWooToQboDevProductNotice($product_id)
+    {
+        $productMeta = new LS_Product_Meta($product_id);
+        echo '<div>';
+        ls_print_r($productMeta->get_to_qbo_json());
+        echo '</div>';
+    }
+
+    public function showQboToWooDevProductNotice($product_id)
+    {
+        $productMeta = new LS_Product_Meta($product_id);
+        echo '<div>';
+        ls_print_r($productMeta->get_from_qbo_json());
+        echo '</div>';
+    }
+
+    public function show_product_woo_to_qbo_admin_error_notice($product_id)
+    {
+        $productMeta = new LS_Product_Meta($product_id);
+        $productSyncError = $productMeta->get_meta('_ls_json_product_error');
+        if (isset($productSyncError['errorCode'])) {
+            $toUserMessage = empty($productSyncError['technicalMessage']) ? $productSyncError['userMessage'] : $productSyncError['technicalMessage'];
+            if (!empty($toUserMessage)) {
+                $this->errorNotice('Sync Product to QuickBooks Failed: (' . $toUserMessage . ')');
+            }
+
+        }
+    }
+
 
     public function display_run_wizard_notice()
     {
@@ -87,5 +184,24 @@ class LS_QBO_Notice
             ?>
         </div>
         <?php
+    }
+
+    public function notice($message, $class = 'error')
+    {
+        ?>
+        <div class="<?php echo $class; ?> notice">
+            <p><?php echo $message; ?></p>
+        </div>
+        <?php
+    }
+
+    public function errorNotice($message)
+    {
+        $this->notice($message);
+    }
+
+    public function updateNotice($message)
+    {
+        $this->notice($message, 'updated');
     }
 }

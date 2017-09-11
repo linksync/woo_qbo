@@ -15,26 +15,12 @@ class LS_Notice
         $postid = empty($_GET['post']) ? null : $_GET['post'];
         if ('shop_order' == $current_screen->id) {
 
-            $orderSyncError = LS_QBO_Order_Helper::getOrderSyncingError($postid);
-            if (isset($orderSyncError['errorCode'])) {
 
-                if (400 == $orderSyncError['errorCode']) {
-                    $this->errorNotice('Sync Order to QuickBooks Failed: (' . $orderSyncError['userMessage'] . ')');
-                }
-            }
 
         }
 
         if ('product' == $current_screen->id) {
-            $productMeta = new LS_Product_Meta($postid);
-            $productSyncError = $productMeta->get_meta('_ls_json_product_error');
-            if (isset($productSyncError['errorCode'])) {
-                $toUserMessage = empty($productSyncError['technicalMessage']) ? $productSyncError['userMessage'] : $productSyncError['technicalMessage'];
-                if (!empty($toUserMessage)) {
-                    $this->errorNotice('Sync Product to QuickBooks Failed: (' . $toUserMessage . ')');
-                }
 
-            }
         }
 
     }

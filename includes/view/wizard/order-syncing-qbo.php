@@ -4,7 +4,7 @@
 	<input type="hidden" name="process" value="wizard" />
 	<input type="hidden" name="action" value="order-sync" />
 	<input type="hidden" name="synctype" value="qbo" />
-	<input type="hidden" name="nextpage" value="<?php echo ('disabled' == $product_syncing_type) ? '0': '4';?>" />
+	<input type="hidden" name="nextpage" value="<?php echo ('disabled' == $product_syncing_type) ? '0': '5';?>" />
 	<p class="form-holder">
 		<strong>Order syncing type</strong>
 		<select name="linksync[order_sync_type]" id="order_syncing_type" class="form-field">

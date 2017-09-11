@@ -20,6 +20,11 @@ class LS_QBO_Options
         return self::$_instance;
     }
 
+    public function connection_status()
+    {
+        return get_option('linksync_status');
+    }
+
     public function save_woocommerce_version($wooVersion)
     {
         return self::instance()->update_option('wooversion', $wooVersion);
@@ -49,6 +54,16 @@ class LS_QBO_Options
     public function updateConnectedWith($value)
     {
         return update_option('linksync_connectionwith', $value);
+    }
+
+    public function get_tax_agencies()
+    {
+        return self::instance()->get_option('tax_agencies', '');
+    }
+
+    public function update_tax_agencies($value)
+    {
+        return self::instance()->update_option('tax_agencies', $value);
     }
 
     public function setTaxRateAndCodeObjects($lwsApiTaxCodesObject)

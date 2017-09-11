@@ -4,7 +4,7 @@
 	<input type="hidden" name="process" value="wizard" />
 	<input type="hidden" name="action" value="product-sync" />
 	<input type="hidden" name="synctype" value="qbo" />
-	<input type="hidden" name="nextpage" value="3" />
+	<input type="hidden" name="nextpage" value="4" />
 	<p class="form-holder">
 		<strong>Product syncing type</strong>
 		<select name="linksync[product_sync_type]" id="product_syncing_type" class="form-field">

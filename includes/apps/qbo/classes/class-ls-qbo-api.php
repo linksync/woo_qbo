@@ -34,6 +34,17 @@ class LS_QBO_Api{
 		return $savedUserSettings;
 	}
 
+    /**
+     * Get All tax agencies of a quickbooks account using linksync api
+     *
+     * @return null
+     */
+    public function get_tax_agencies()
+    {
+        $taxAgencies = $this->api->get('qbo/taxagency');
+        return isset($taxAgencies['taxAgencies'])? $taxAgencies['taxAgencies'] : null;
+	}
+
 	/**
 	 * QuickBooks Online Tax
 	 * Returns all active tax rates for the current retailer
@@ -231,4 +242,14 @@ class LS_QBO_Api{
 	public function get_laid_info(){
         return $this->api->get('laid');
 	}
+
+    public function send_log($data)
+    {
+        return $this->api->post('laid/sendLog', $data);
+    }
+
+    public function post($url_end_point, $data)
+    {
+        return $this->api->post($url_end_point, $data);
+    }
 }

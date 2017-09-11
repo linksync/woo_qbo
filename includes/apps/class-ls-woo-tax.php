@@ -245,16 +245,14 @@ class LS_Woo_Tax{
         set_time_limit(0);
         $taxDataToBeUsed = array();
         $qbo_api = LS_QBO()->api();
-        $laidInfo = null;
 
 
         if (null == $currentLaidInfo) {
-            $laidInfo = $qbo_api->get_laid_info();
-            update_option('ls_laid_info', $laidInfo);
-            $currentLaidInfo = $laidInfo;
+            $currentLaidInfo = $qbo_api->get_laid_info();
+            update_option('ls_laid_info', $currentLaidInfo);
         }
 
-        if (!empty($laidInfo)) {
+        if (!empty($currentLaidInfo)) {
             /**
              * Use Taxcode data
              */

@@ -34,25 +34,16 @@ if (!class_exists('LS_QBO')) {
         public function run()
         {
 
-            $in_woo_duplicate_skus = LS_Woo_Product::get_woo_duplicate_sku();
-            $in_woo_empty_product_skus = LS_Woo_Product::get_woo_empty_sku();
-            $in_qbo_duplicate_and_empty_skus = LS_QBO()->api()->product()->get_duplicate_products();
-            LS_QBO()->options()->updateQuickBooksDuplicateProducts($in_qbo_duplicate_and_empty_skus);
-
-            $GLOBALS['in_woo_duplicate_skus'] = $in_woo_duplicate_skus;
-            $GLOBALS['in_woo_empty_product_skus'] = $in_woo_empty_product_skus;
-            $GLOBALS['in_qbo_duplicate_and_empty_skus'] = $in_qbo_duplicate_and_empty_skus['products'];
-
             LS_QBO_Hook::init();
             $this->load_ajax_hooks();
 
             new LS_Description_Handler();
-            new LS_User_Helper();
             new LS_Support_Helper();
             new LS_QBO_Sync();
             new LS_Notice();
             new LS_QBO_Ajax();
             new LS_QBO_Menu();
+
         }
 
         public function load_ajax_hooks()
@@ -213,6 +204,7 @@ if (!class_exists('LS_QBO')) {
             LS_QBO()->options()->updateAssetAccounts($qbo_api->get_assets_accounts());
             LS_QBO()->options()->updateExpeseAccounts($qbo_api->get_expense_accounts());
             LS_QBO()->options()->updateIncomeAccounts($qbo_api->get_income_accounts());
+            LS_QBO()->options()->update_tax_agencies($qbo_api->get_tax_agencies());
             $qbo_api->get_all_tax_rate(); // send request to qbo/tax api to create zero tax rate
             $taxDataToBeUsed = LS_Woo_Tax::getQuickBookTaxDataToBeUsed();
             LS_QBO()->options()->updateQuickBooksTaxClasses($taxDataToBeUsed);
@@ -236,6 +228,7 @@ if (!class_exists('LS_QBO')) {
             LS_QBO()->options()->update_deposit_accounts($deposit_accounts);
             LS_QBO()->options()->updateQuickBooksLocationList($qbo_api->get_all_active_location());
             LS_QBO()->options()->updateQuickBooksClasses($qbo_classes);
+            LS_QBO()->options()->update_tax_agencies($qbo_api->get_tax_agencies());
 
             $qbo_api->get_all_tax_rate(); // send request to qbo/tax api to create zero tax rate
             $taxDataToBeUsed = LS_Woo_Tax::getQuickBookTaxDataToBeUsed();
@@ -396,7 +389,6 @@ if (!class_exists('LS_QBO')) {
         {
 
 
-
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-laid.php';
             include_once LS_INC_DIR . 'apps/qbo/constants/class-ls-qbo-item-type.php';
             include_once LS_INC_DIR . 'apps/qbo/constants/class-ls-qbo-receipt-type.php';
@@ -422,6 +414,7 @@ if (!class_exists('LS_QBO')) {
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-order-form.php';
 
             include_once LS_INC_DIR . 'apps/class-ls-product-meta.php';
+            include_once LS_INC_DIR . 'apps/class-ls-order-meta.php';
             include_once LS_INC_DIR . 'apps/class-ls-simple-product.php';
             include_once LS_INC_DIR . 'apps/class-ls-variant-product.php';
 
@@ -443,15 +436,22 @@ if (!class_exists('LS_QBO')) {
             include_once LS_INC_DIR . 'apps/qbo/helpers/class-ls-qbo-log-helper.php';
 
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-sync.php';
+            include_once LS_INC_DIR . 'apps/qbo/classes/customize-column/class-ls-qbo-order-custom-column.php';
+            include_once LS_INC_DIR . 'apps/qbo/classes/customize-column/class-ls-qbo-product-custom-column.php';
             include_once LS_INC_DIR . 'apps/class-ls-notice.php';
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-ajax.php';
             require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-menu.php';
             require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-view.php';
+            require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-view-config-section.php';
+            require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-view-advance-section.php';
             require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-notice.php';
             require_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-notice.php';
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-scripts.php';
             include_once LS_INC_DIR . 'classes/class-ls-duplicate-sku-list.php';
+            include_once LS_INC_DIR . 'classes/class-ls-modal.php';
             include_once LS_INC_DIR . 'apps/qbo/classes/list/class-ls-qbo-duplicate-sku-list.php';
+            include_once LS_INC_DIR . 'apps/qbo/classes/list/class-ls-qbo-connected-product-list.php';
+            include_once LS_INC_DIR . 'apps/qbo/classes/list/class-ls-qbo-connected-order-list.php';
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-install.php';
             include_once LS_INC_DIR . 'apps/qbo/classes/class-ls-qbo-hooks.php';
 
@@ -466,19 +466,21 @@ if (!class_exists('LS_QBO')) {
             return new LS_QBO_View();
         }
 
-        public function show_qbo_duplicate_products($list)
+        public function show_qbo_duplicate_products($duplicate_in = 'in_quickbooks_online')
         {
-            $duplcateSkuListLink = ' <a target="_blank" href="' . LS_QBO_Menu::linksync_page_menu_url('duplicate_sku&section=in_quickbooks_online') . '" > Click here</a>';
-            LS_Message_Builder::error('You have duplicate products or empty skus in your <a href="https://qbo.intuit.com/app/items" target="_blank">QuickBook Online</a>.' . $duplcateSkuListLink . ' to view the list');
+            $duplicate_where = '<a href="https://qbo.intuit.com/app/items" target="_blank">QuickBook Online</a>';
+            if('in_quickbooks_online' != $duplicate_in){
+                $duplicate_in = 'in_woocommerce';
+                $duplicate_where = 'WooCommerce';
+            }
+            $duplcateSkuListLink = ' <a target="_blank" href="' . LS_QBO_Menu::linksync_page_menu_url('duplicate_sku&section='.$duplicate_in) . '" > Click here</a>';
+
+            LS_Message_Builder::error('You have duplicate products or empty skus in your '.$duplicate_where.'.' . $duplcateSkuListLink . ' to view the list');
         }
 
-        public function show_woo_duplicate_products($list, $emptySkus = array(), $duplicateSkus = array())
+        public function show_woo_duplicate_products($list = null, $emptySkus = array(), $duplicateSkus = array())
         {
-
-            $wooCommerceProductListLink = '<a target="_blank" href="' . admin_url('edit.php?post_type=product') . '">Woocommerce</a>. ';
-            $duplcateSkuListLink = ' <a target="_blank" href="' . LS_QBO_Menu::linksync_page_menu_url('duplicate_sku') . '" > Click here</a>';
-            LS_Message_Builder::notice('You have duplicate or empty skus in your ' . $wooCommerceProductListLink . $duplcateSkuListLink . ' to view the list');
-
+            LS_Message_Builder::notice(LS_QBO_Helper::duplicate_sku_message());
         }
 
         public function show_shipping_and_discount_guide($user_options)
@@ -508,7 +510,8 @@ if (!class_exists('LS_QBO')) {
 
         public function show_configure_tax_error()
         {
-            echo '<p>Please go to your <a target="_blank" href="https://sg.qbo.intuit.com/app/salestax">QuickBooks Tax Setttings</a> and configure your Tax Rates.</p>';
+            $taxError =  'Please go to your <a target="_blank" href="https://sg.qbo.intuit.com/app/salestax">QuickBooks Tax Setttings</a> and configure your Tax Rates.';
+            return $taxError;
         }
 
         public function isUsAccount()

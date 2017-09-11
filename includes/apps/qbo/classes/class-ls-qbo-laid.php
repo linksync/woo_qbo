@@ -44,15 +44,16 @@ class LS_QBO_Laid
      *
      * @return array LAID key information
      */
-    public function getLaidInfo($laid_key = null){
-        if( empty($laid_key)){
+    public function getLaidInfo($laid_key = null)
+    {
+        if (empty($laid_key)) {
             $laid_key = $this->getCurrentLaid();
         }
         /**
          * Require api Config
          */
         $apiConfig = $this->getConfig();
-        $api = new LS_Api( $apiConfig, $laid_key );
+        $api = new LS_Api($apiConfig, $laid_key);
 
         return $api->get('laid');
 
@@ -130,7 +131,7 @@ class LS_QBO_Laid
      * @param null|string $laid LAID key or the Api key used in connecting to Linksync Server
      * @return array|null|string
      */
-    public function checkApiKey($laid = null)
+    public function checkApiKey($laid = null, $force_get_laid = false)
     {
         //if laid is null then get the current laid key connection to check its validity
         $laid_key = (null == $laid) ? $this->getCurrentLaid() : $laid;
@@ -144,6 +145,10 @@ class LS_QBO_Laid
 
         $current_laid_key_info = $this->getLaidInfo($laid_key);
         $laid_connection['lws_laid_key_info'] = $current_laid_key_info;
+
+        if (!empty($current_laid_key_info)) {
+            $this->updateCurrentLaidInfo($current_laid_key_info);
+        }
 
         if (!empty($current_laid_key_info['errorCode'])) {
 
@@ -225,7 +230,7 @@ class LS_QBO_Laid
                     LS_Woo_Product::deleteQuickBookDatas();
                 }
 
-                $updateWebHook = $this->updateWebHookConnection();
+                $updateWebHook = $this->updateWebHookConnection(array('laid_key' => $laid_key));
                 $laid_connection['webhook_response'] = $updateWebHook;
                 if (isset($updateWebHook['errorCode'])) {
                     $laid_connection['errorCode'] = $updateWebHook['errorCode'];
@@ -258,7 +263,7 @@ class LS_QBO_Laid
         /**
          * Get the configuration or the selection of api config.
          */
-        $config = require(LS_PLUGIN_DIR . 'ls-api-config.php');
+        $config = require(LS_PLUGIN_DIR . 'environment.php');
 
         /**
          * Check if test mode is set to true
@@ -318,10 +323,11 @@ class LS_QBO_Laid
      * @param int get the connected application name based on its id
      * @return string
      */
-    public function getConnectedApp($app){
+    public function getConnectedApp($app)
+    {
         $apps = $this->getApps();
 
-        if(is_numeric($app) && array_key_exists($app, $apps)) {
+        if (is_numeric($app) && array_key_exists($app, $apps)) {
             return $apps[$app];
         }
 

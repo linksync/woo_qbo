@@ -47,7 +47,13 @@ class LS_QBO_Script
                     wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
 
                 } else if ('order_config' == $activeTabPage) {
-                    wp_enqueue_script('ls-qbo-product-syncing', LS_ASSETS_URL . 'js/qbo-order-syncing.js', array('jquery'));
+                    wp_enqueue_script('ls-qbo-order-syncing', LS_ASSETS_URL . 'js/qbo-order-syncing.js', array('jquery'));
+                } else if ('advance' == $activeTabPage) {
+                    //configuration tab
+                    wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
+                    wp_enqueue_script('ls-sync-all-buttons', LS_ASSETS_URL . 'js/ls-sync-buttons.js', array('jquery'));
+                    wp_enqueue_script('ls-qbo-configuration', LS_ASSETS_URL . 'js/qbo-configuration.js', array('jquery'));
+                    wp_enqueue_style('ls-jquery-ui-css', LS_ASSETS_URL . 'jquery-ui.css');
                 } else {
                     //configuration tab
                     wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));
@@ -66,6 +72,7 @@ class LS_QBO_Script
         }
 
         if (isset($_GET['page']) && $_GET['page'] == 'linksync-wizard') {
+            wp_enqueue_style('ls-styles', LS_ASSETS_URL . 'css/style.css');
             add_action('admin_head', array('Wizard_Model', 'remove_all_admin_notices_during_wizard_process'));
             wp_enqueue_script('ls-ajax-handler', LS_ASSETS_URL . 'js/ls-ajax.js', array('jquery'));
             wp_enqueue_script('ls-sync-modal', LS_ASSETS_URL . 'js/ls-sync-modal.js', array('jquery'));

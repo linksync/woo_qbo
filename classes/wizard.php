@@ -36,12 +36,37 @@ class Wizard_Model
             self::apikey();
         }
 
+        if (isset($_POST['action']) && $_POST['action'] == 'taxsetup') {
+            self::tax_setup();
+        }
+
+
         if (isset($_POST['action']) && $_POST['action'] == 'product-sync') {
             self::product_syncing();
         }
 
         if (isset($_POST['action']) && $_POST['action'] == 'order-sync') {
             self::order_syncing();
+        }
+    }
+
+    public static function tax_setup()
+    {
+
+        $apikey = LS_QBO()->laid()->getCurrentLaid();
+        if (empty($apikey)) {
+            wp_redirect(LS_QBO_Menu::get_wizard_admin_menu_url());
+            exit();
+        }
+        /**
+         * Get tax data from quickbooks to be used
+         */
+        $taxDataToBeUsed = LS_Woo_Tax::getQuickBookTaxDataToBeUsed($apikey);
+        LS_QBO()->options()->updateQuickBooksTaxClasses($taxDataToBeUsed);
+
+        if(empty($taxDataToBeUsed)){
+            wp_redirect(LS_QBO_Menu::get_wizard_admin_menu_url('&step=2'));
+            exit();
         }
     }
 
@@ -59,6 +84,12 @@ class Wizard_Model
         if (!empty($apikey)) {
             $res = LS_QBO()->laid()->checkApiKey($apikey);
 
+
+            /**
+             * Get tax data from quickbooks to be used
+             */
+            $taxDataToBeUsed = LS_Woo_Tax::getQuickBookTaxDataToBeUsed($apikey);
+            LS_QBO()->options()->updateQuickBooksTaxClasses($taxDataToBeUsed);
 
             if (!empty($res['error_message'])) {
                 if (!empty($res['error_message']) && 'Connection to the update URL failed.' == $res['error_message']) {
@@ -213,74 +244,4 @@ class Wizard_Model
         exit();
     }
 
-    public static function checkAppConnection($apikey, $save = 0)
-    {
-        $apicall = new linksync_class($apikey, 'off');
-        $result = $apicall->testConnection();
-        $response = array();
-        $app_connection = false;
-        if (isset($result) && !empty($result)) {
-            if (isset($result['errorCode']) && !empty($result['userMessage'])) {
-                update_option('linksync_error_message', $result['userMessage']);
-                $response = array(
-                    'success' => false
-                );
-            } else {
-                if (isset($result['app']) && !empty($result['app'])) {
-                    $app_name = self::appid_app($result['app']);
-                    if (isset($app_name) && !empty($app_name['success'])) {
-                        $app_name_status = 'Active';
-                    }
-                }
-
-                if (isset($result['connected_app']) && !empty($result['connected_app'])) {
-                    $connected_app = self::appid_app($result['connected_app']);
-                    if (isset($connected_app) && !empty($connected_app['success'])) {
-                        $status = 'Active';
-                        $app_connection = $connected_app['success'];
-                    }
-                }
-
-                if ($status == 'Active' && $app_name_status == 'Active') {
-                    if ($save == 1) {
-                        update_option('linksync_laid', $apikey);
-                    }
-                    $response = array(
-                        'success' => true,
-                        'app_connected' => $app_connection
-                    );
-                } else {
-                    update_option('linksync_error_message', "The supplied API Key is not valid for use with linksync for WooCommerce.");
-                    $response = array(
-                        'success' => false
-                    );
-                }
-            }
-        } else {
-            update_option('linksync_error_message', "The supplied API Key is not valid for use with linksync for WooCommerce.");
-            $response = array(
-                'success' => false
-            );
-        }
-
-        return $response;
-    }
-
-    public static function appid_app($app_id)
-    {
-        $connected_app = array(
-            '4' => 'Xero',
-            '7' => 'MYOB RetailManager',
-            '8' => 'Saasu',
-            '13' => 'WooCommerce',
-            '15' => 'QuickBooks Online',
-            '18' => 'Vend'
-        );
-        if (array_key_exists($app_id, $connected_app)) {
-            $result['success'] = $connected_app[$app_id];
-        } else {
-            $result['error'] = 'The supplied API Key is not valid for use with linksync for WooCommerce.';
-        }
-        return $result;
-    }
 }

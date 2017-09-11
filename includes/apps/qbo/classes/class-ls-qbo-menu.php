@@ -65,6 +65,7 @@ class LS_QBO_Menu
             'config',
             'product_config',
             'order_config',
+            'advance',
             'logs',
             'support',
             'duplicate_sku'
@@ -85,30 +86,35 @@ class LS_QBO_Menu
     {
         $active_tab = self::get_active_tab_page();
         ?>
-        <h2 class="nav-tab-wrapper woo-nav-tab-wrapper">
+        <h2 class="ls-tab-menu">
 
             <a href="<?php echo self::tab_admin_menu_url(); ?>"
-               class="nav-tab <?php echo ('config' == $active_tab) ? 'nav-tab-active' : ''; ?>">
+               class="ls-nav-tab <?php echo ('config' == $active_tab) ? 'ls-nav-tab-active' : ''; ?>">
                 Configuration
             </a>
 
-            <a href="<?php echo self::tab_admin_menu_url('product_config') ?>"
-               class="nav-tab <?php echo ('product_config' == $active_tab) ? 'nav-tab-active' : ''; ?> ">
+            <a href="<?php echo self::tab_admin_menu_url('product_config'); ?>"
+               class="ls-nav-tab <?php echo ('product_config' == $active_tab) ? 'ls-nav-tab-active' : ''; ?> ">
                 Product Syncing Setting
             </a>
 
             <a href="<?php echo self::tab_admin_menu_url('order_config') ?>"
-               class="nav-tab <?php echo ('order_config' == $active_tab) ? 'nav-tab-active' : ''; ?> ">
+               class="ls-nav-tab <?php echo ('order_config' == $active_tab) ? 'ls-nav-tab-active' : ''; ?> ">
                 Order Syncing Setting
             </a>
 
+            <a href="<?php echo self::tab_admin_menu_url('advance') ?>"
+               class="ls-nav-tab <?php echo ('advance' == $active_tab) ? 'ls-nav-tab-active' : ''; ?> ">
+                Advanced
+            </a>
+
             <a href="<?php echo self::tab_admin_menu_url('support') ?>"
-               class="nav-tab <?php echo ('support' == $active_tab) ? 'nav-tab-active' : ''; ?>">
+               class="ls-nav-tab <?php echo ('support' == $active_tab) ? 'ls-nav-tab-active' : ''; ?>">
                 Support
             </a>
 
             <a href="<?php echo self::tab_admin_menu_url('logs') ?>"
-               class="nav-tab <?php echo ('logs' == $active_tab) ? 'nav-tab-active' : ''; ?>">
+               class="ls-nav-tab <?php echo ('logs' == $active_tab) ? 'ls-nav-tab-active' : ''; ?>">
                 Logs
             </a>
 
@@ -170,6 +176,20 @@ class LS_QBO_Menu
         return $url;
     }
 
+    public static function get_linksync_page_menu_ur()
+    {
+        $url = 'admin.php?page=' . LS_QBO::$slug;
+        $linksync_page_slug = '';
+        if(!empty($_REQUEST['linksync_page'])){
+            $linksync_page_slug = $_REQUEST['linksync_page'];
+        }
+        if (null != $linksync_page_slug) {
+            $url .= '&linksync_page=' . $linksync_page_slug;
+        }
+
+        return $url;
+    }
+
     public static function get_linksync_admin_url()
     {
         return self::admin_url(self::page_menu_url(LS_QBO::$slug));
@@ -200,7 +220,6 @@ class LS_QBO_Menu
 
     public function initialize_admin_menu()
     {
-        global $in_woo_duplicate_skus, $in_woo_empty_product_skus, $in_qbo_duplicate_and_empty_skus;
 
         $menu_slug = LS_QBO::$slug;
 
@@ -212,6 +231,15 @@ class LS_QBO_Menu
             array(__CLASS__, 'settings'),
             LS_QBO_ASSETS_URL . 'images/linksync/logo-icon.png',
             '55.6'
+        );
+
+        add_submenu_page(
+            $menu_slug,
+            __('linksync Configuration', $menu_slug),
+            __('Configuration', 'manage_options'),
+            'manage_options',
+            self::tab_menu_url('config'),
+            null
         );
 
         add_submenu_page(
@@ -232,35 +260,35 @@ class LS_QBO_Menu
             null
         );
 
-//        add_submenu_page(
-//            $menu_slug,
-//            __('linksync Connected Products', $menu_slug),
-//            __('Connected Products', $menu_slug),
-//            'manage_options',
-//            self::menu_url('connected_products'),
-//            null
-//        );
-//
-//        add_submenu_page(
-//            $menu_slug,
-//            __('linksync Connected Orders', $menu_slug),
-//            __('Connected Orders', $menu_slug),
-//            'manage_options',
-//            self::menu_url('connected_orders'),
-//            null
-//        );
+        add_submenu_page(
+            $menu_slug,
+            __('linksync Synced Products', $menu_slug),
+            __('Synced Products', $menu_slug),
+            'manage_options',
+            self::linksync_page_menu_url('synced_products'),
+            null
+        );
+
+        add_submenu_page(
+            $menu_slug,
+            __('linksync Synced Orders', $menu_slug),
+            __('Synced Orders', $menu_slug),
+            'manage_options',
+            self::linksync_page_menu_url('synced_orders'),
+            null
+        );
 
 
-        if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_qbo_duplicate_and_empty_skus)) {
-            add_submenu_page(
-                $menu_slug,
-                __('linksync Duplicate SKU', $menu_slug),
-                __('Duplicate SKU', $menu_slug),
-                'manage_options',
-                self::linksync_page_menu_url('duplicate_sku'),
-                null
-            );
-        }
+//        if (!empty($in_woo_duplicate_skus) || !empty($in_woo_empty_product_skus) || !empty($in_qbo_duplicate_and_empty_skus)) {
+//            add_submenu_page(
+//                $menu_slug,
+//                __('linksync Duplicate SKU', $menu_slug),
+//                __('Duplicate SKU', $menu_slug),
+//                'manage_options',
+//                self::linksync_page_menu_url('duplicate_sku'),
+//                null
+//            );
+//        }
 
         add_submenu_page(
             $menu_slug,
@@ -303,20 +331,50 @@ class LS_QBO_Menu
         $mainMenuSelector = '#' . $linkSyncQBOMenuId . ' > a';
         $mainMenuHrefUrl = self::tab_menu_url();
         $subMenuSelector = '#' . $linkSyncQBOMenuId . ' > ul > li';
+        $duplicateMenuUrl = self::linksync_page_menu_url('duplicate_sku');
+        $activeLinksyncPage = self::get_linksync_page_menu_ur();
 
+        $duplicateMenuClass = '';
+        if($duplicateMenuUrl == $activeLinksyncPage){
+            $duplicateMenuClass = 'class="current"';
+        }
 
         ?>
         <script>
             (function ($) {
 
                 var currentPage = '<?php echo $currentPage; ?>';
+                var currentLinksyncPage = '<?php echo $activeLinksyncPage; ?>';
                 $(document).ready(function () {
 
                     $('<?php echo $mainMenuSelector; ?>').attr("href", "<?php echo $mainMenuHrefUrl; ?>")
                     $('<?php echo $subMenuSelector; ?>').removeClass('current');
                     $('<?php echo $subMenuSelector; ?> a').each(function () {
-                        if ($(this).attr('href') == currentPage) {
+                        if (
+                            $(this).attr('href') == currentPage ||
+                            $(this).attr('href') == currentLinksyncPage
+                        ) {
                             $(this).parent().addClass('current');
+                        }
+
+                        var currentMenuName = $(this).text();
+                        if('Synced Orders' == currentMenuName){
+                            var $connectedOrderElement = $(this).parent();
+
+                            $.post(ajaxurl, {action: 'qbo_save_product_qbo_duplicates'}).done(function (response) {
+                                console.log(response);
+                                var qbo_product_duplicates = response.qbo_product_duplicates;
+                                var woo_duplicate_product_skus = response.woo_duplicate_skus;
+                                var woo_empty_product_skus = response.woo_empty_product_skus;
+                                if(
+                                    qbo_product_duplicates.length > 0 ||
+                                    woo_duplicate_product_skus.length > 0 ||
+                                    woo_empty_product_skus.length > 0
+                                ){
+                                    $connectedOrderElement.after('<li <?php echo $duplicateMenuClass; ?> ><a href="<?php echo $duplicateMenuUrl; ?>">Duplicate SKU</a></li>');
+                                }
+
+                            });
                         }
                     });
 
